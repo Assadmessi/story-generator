@@ -22,7 +22,6 @@ const statusMessage = document.getElementById("statusMessage");
 const shareMenu = document.getElementById("shareMenu");
 const shareBackdrop = document.getElementById("shareBackdrop");
 const closeShareMenuBtn = document.getElementById("closeShareMenu");
-const shareFacebookBtn = document.getElementById("shareFacebook");
 const shareWhatsAppBtn = document.getElementById("shareWhatsApp");
 const shareViberBtn = document.getElementById("shareViber");
 
@@ -355,14 +354,6 @@ async function shareToPlatform(platform) {
         return;
     }
 
-    if (platform === "facebook") {
-        await copyStory(payload.text);
-        openShareWindow(`https://www.facebook.com/dialog/share?app_id=966242223397117&display=popup&href=${payload.encodedUrl}`);
-        showStatus("Facebook share opened. Your story was copied, so you can paste it into your post.");
-        closeShareMenu();
-        return;
-    }
-
     if (platform === "whatsapp") {
         openShareWindow(`https://wa.me/?text=${payload.encodedCombinedText}`);
         showStatus("WhatsApp share opened.");
@@ -377,9 +368,9 @@ async function shareToPlatform(platform) {
         return;
     }
 
-        showStatus("Instagram does not support direct text share from normal web pages, so your story was copied and Instagram was opened.", true);
-        closeShareMenu();
-    }
+    showStatus("That sharing option is not available right now.", true);
+    closeShareMenu();
+}
 
 
 async function shareStory() {
@@ -497,7 +488,6 @@ output.dataset.storyText = DEFAULT_OUTPUT;
 
 shareBackdrop.addEventListener("click", closeShareMenu);
 closeShareMenuBtn.addEventListener("click", closeShareMenu);
-shareFacebookBtn.addEventListener("click", () => shareToPlatform("facebook"));
 shareWhatsAppBtn.addEventListener("click", () => shareToPlatform("whatsapp"));
 shareViberBtn.addEventListener("click", () => shareToPlatform("viber"));
 
