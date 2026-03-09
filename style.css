@@ -600,94 +600,33 @@ body.light .skeleton-line {
 .share-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 14px;
+    gap: 12px;
 }
 
 .share-option {
-    min-height: 88px;
-    border-radius: 20px;
+    min-height: 64px;
+    border-radius: 18px;
     border: 1px solid var(--border);
     background: var(--input-bg);
     color: var(--text);
     font-weight: 700;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    justify-content: flex-start;
-    padding: 16px 18px;
-    text-align: left;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
 }
 
-.share-option:hover {
-    border-color: rgba(255,255,255,0.2);
-}
-
-.share-option-icon {
-    width: 46px;
-    height: 46px;
-    border-radius: 14px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.12);
-    box-shadow: 0 10px 24px rgba(2, 8, 23, 0.18);
-}
-
-.share-option-icon svg {
-    width: 22px;
-    height: 22px;
-}
-
-.share-option-text {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.share-option-text strong {
-    font-size: 1rem;
-}
-
-.share-option-text small {
-    color: var(--muted);
-    font-size: 0.82rem;
-    font-weight: 600;
+.share-option.facebook {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.22), rgba(59, 130, 246, 0.12));
 }
 
 .share-option.whatsapp {
-    background: linear-gradient(135deg, rgba(22, 163, 74, 0.2), rgba(74, 222, 128, 0.08));
+    background: linear-gradient(135deg, rgba(22, 163, 74, 0.22), rgba(74, 222, 128, 0.12));
 }
 
-.share-option.whatsapp .share-option-icon {
-    color: #dcfce7;
-    background: rgba(22, 163, 74, 0.22);
-    border-color: rgba(74, 222, 128, 0.28);
-}
 
 .share-option.viber {
-    background: linear-gradient(135deg, rgba(124, 58, 237, 0.2), rgba(167, 139, 250, 0.08));
-}
-
-.share-option.viber .share-option-icon {
-    color: #f3e8ff;
-    background: rgba(124, 58, 237, 0.22);
-    border-color: rgba(167, 139, 250, 0.28);
-}
-
-body.light .share-option {
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.65);
-}
-
-body.light .share-option-icon {
-    background: rgba(255,255,255,0.78);
-    border-color: rgba(100, 116, 139, 0.18);
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.22), rgba(167, 139, 250, 0.12));
 }
 
 .share-help {
-    margin: 16px 0 0;
+    margin: 14px 0 0;
     color: var(--muted);
     line-height: 1.6;
     font-size: 0.94rem;
@@ -708,15 +647,17 @@ body.share-menu-open {
     }
 }
 
-@media (max-width: 640px) {
-    .share-grid {
-        grid-template-columns: 1fr;
-    }
 
-    .share-sheet {
-        bottom: 14px;
-        width: min(100% - 16px, 560px);
-        padding: 18px;
-        border-radius: 22px;
-    }
+/* language switch */
+.language-switch{
+margin:10px 0;
+}
+
+.language-switch select{
+padding:6px 10px;
+border-radius:8px;
+background:transparent;
+border:1px solid rgba(255,255,255,0.2);
+color:inherit;
+font-size:14px;
 }

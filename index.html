@@ -67,6 +67,13 @@
                     </div>
                 </div>
 
+                <div class="language-switch">
+<select id="languageSelect">
+<option value="en">English</option>
+<option value="mm">မြန်မာ</option>
+</select>
+</div>
+
                 <div class="actions">
                     <button class="primary" id="generateBtn" type="button">Generate Story</button>
                     <button class="secondary" id="randomBtn" type="button">🎲 Random Story</button>
@@ -89,34 +96,11 @@
                             <button class="ghost small" id="closeShareMenu" type="button">Close</button>
                         </div>
                         <div class="share-grid">
-                            <button class="share-option whatsapp" id="shareWhatsApp" type="button" aria-label="Share on WhatsApp">
-                                <span class="share-option-icon" aria-hidden="true">
-                                    <svg viewBox="0 0 24 24" fill="none" role="img">
-                                        <path d="M12 3.2a8.6 8.6 0 0 0-7.41 12.96L3.4 20.6l4.57-1.17A8.6 8.6 0 1 0 12 3.2Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-                                        <path d="M8.97 8.93c.2-.44.42-.45.62-.46.16 0 .34 0 .52.01.17 0 .45.06.68.57.22.53.76 1.84.83 1.98.07.14.12.31.02.5-.1.2-.15.32-.3.49-.14.17-.3.39-.42.52-.14.15-.29.32-.12.62.16.3.72 1.18 1.56 1.9 1.07.91 1.97 1.2 2.27 1.34.3.13.47.11.64-.07.17-.17.74-.86.94-1.15.2-.3.4-.24.67-.14.28.1 1.75.83 2.05.97.3.15.5.22.57.34.07.11.07.67-.16 1.33-.23.66-1.34 1.26-1.84 1.33-.47.06-1.06.09-1.72-.11-.41-.13-.95-.31-1.63-.6-2.86-1.24-4.72-4.14-4.86-4.34-.14-.2-1.16-1.55-1.16-2.96 0-1.41.74-2.1 1-2.39Z" fill="currentColor"/>
-                                    </svg>
-                                </span>
-                                <span class="share-option-text">
-                                    <strong>WhatsApp</strong>
-                                    <small>Send story text directly</small>
-                                </span>
-                            </button>
-                            <button class="share-option viber" id="shareViber" type="button" aria-label="Share on Viber">
-                                <span class="share-option-icon" aria-hidden="true">
-                                    <svg viewBox="0 0 24 24" fill="none" role="img">
-                                        <path d="M12 3.2c4.71 0 8.53 3.4 8.53 7.6 0 2.18-1.02 4.15-2.66 5.54l.42 3.38-3.3-1.76a9.4 9.4 0 0 1-2.99.48c-4.7 0-8.52-3.4-8.52-7.6s3.82-7.64 8.52-7.64Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
-                                        <path d="M9.35 8.42c.24-.2.48-.17.68.1l.92 1.25c.17.23.17.47 0 .7l-.45.6c-.12.16-.13.35-.03.54.16.28.47.7.94 1.14.48.45.93.73 1.23.88.2.1.4.08.55-.06l.58-.49c.23-.19.47-.2.71-.04l1.35.87c.28.18.33.43.15.68l-.5.67c-.42.57-1.08.82-1.77.69-.92-.18-2.18-.89-3.46-2.08-1.26-1.17-2.03-2.4-2.24-3.31-.16-.68.06-1.35.6-1.79l.74-.55Z" fill="currentColor"/>
-                                        <path d="M14.8 7.75a3.57 3.57 0 0 1 1.45 1.08c.39.5.64 1.1.72 1.72" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-                                        <path d="M14.54 5.92c1.06.18 2.04.72 2.81 1.54.76.81 1.24 1.82 1.37 2.93" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-                                    </svg>
-                                </span>
-                                <span class="share-option-text">
-                                    <strong>Viber</strong>
-                                    <small>Forward story text instantly</small>
-                                </span>
-                            </button>
+                            <button class="share-option facebook" id="shareFacebook" type="button">Facebook</button>
+                            <button class="share-option whatsapp" id="shareWhatsApp" type="button">WhatsApp</button>
+                                                        <button class="share-option viber" id="shareViber" type="button">Viber</button>
                         </div>
-                        <p class="share-help">Choose the app you want. Both options carry your story text directly.</p>
+                        <p class="share-help">WhatsApp and Viber can carry your story text directly. For Facebook, the story is copied for easy pasting after the share window opens.</p>
                     </div>
                 </div>
             </section>
