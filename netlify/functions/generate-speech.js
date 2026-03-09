@@ -1,4 +1,5 @@
-const GEMINI_TTS_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent";
+const GEMINI_TTS_URL =
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent";
 
 const CORS_HEADERS = {
   "Content-Type": "application/json",
@@ -7,43 +8,109 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Methods": "POST, OPTIONS"
 };
 
-// Gemini TTS supports a shared pool of prebuilt voices. There is no documented
-// "Daniel" voice, so we use a small storyteller-style rotation that aims for a
-// similarly warm, mature, narrative feel.
+// Prebuilt Gemini voices are shared voice identities, not English-only voices.
+// Burmese is supported by Gemini TTS, so the important part is making the
+// transcript + direction prompt stay fully Burmese.
 const LANGUAGE_CONFIG = {
   en: {
     locale: "en",
     voices: ["Sulafat", "Gacrux", "Achird"],
     stylePrompt:
-      "You are a warm, mature storyteller. Read only the transcript in expressive, cinematic English with smooth pacing, clean pronunciation, and an immersive storybook feel. No extra introductions. No labels. No commentary."
+      [
+        "You are a warm, mature storytelling narrator.",
+        "Read ONLY the provided transcript.",
+        "Use expressive, cinematic English with smooth pacing, clear pronunciation, and a polished storybook feel.",
+        "Do not translate anything.",
+        "Do not add introductions, labels, commentary, or extra lines."
+      ].join(" ")
   },
   mm: {
     locale: "my",
     voices: ["Sulafat", "Gacrux", "Achird"],
     stylePrompt:
-      "သင်က ပုံပြင်ပြောသံ နွေးထွေးပြီး တည်ငြိမ်တဲ့ ဇာတ်ကြောင်းပြောသူတစ်ယောက်ပါ။ အောက်က စာသားကိုသာ သဘာဝကျတဲ့ မြန်မာအသံနဲ့ ပုံပြင်ဆန်ဆန် ဖတ်ပေးပါ။ အစကားမထည့်ပါနဲ့။ မှတ်ချက်မထည့်ပါနဲ့။ အညွှန်းစာမဖတ်ပါနဲ့။"
+      [
+        "သင်သည် နွေးထွေးပြီး တည်ငြိမ်တဲ့ ပုံပြင်ပြောသူတစ်ယောက် ဖြစ်သည်။",
+        "အောက်ပါ မြန်မာစာ ဇာတ်လမ်းကိုသာ ဖတ်ပါ။",
+        "မြန်မာဘာသာဖြင့်သာ ဖတ်ပါ။",
+        "အင်္ဂလိပ်လို မဖတ်ပါနဲ့။",
+        "မဘာသာပြန်ပါနဲ့။",
+        "အစကား၊ အဆုံးသတ်မှတ်ချက်၊ အညွှန်းစာ၊ မှတ်ချက်၊ extra စာသား မထည့်ပါနဲ့။",
+        "သဘာဝကျပြီး ပုံပြင်ဆန်ဆန်၊ အသံအနိမ့်အမြင့် သင့်တော်စွာ၊ စကားလုံးပြတ်သားစွာ ဖတ်ပါ။"
+      ].join(" ")
   }
 };
 
 const CHUNK_LIMITS = {
   en: 260,
-  mm: 120
+  mm: 90
 };
 
+function normalizeLanguage(language = "en") {
+  const value = String(language || "en").trim().toLowerCase();
+
+  if (value === "mm" || value === "my" || value === "my-mm" || value === "burmese") {
+    return "mm";
+  }
+
+  return "en";
+}
+
 function getLanguageConfig(language = "en") {
-  return LANGUAGE_CONFIG[String(language || "en").toLowerCase()] || LANGUAGE_CONFIG.en;
+  return LANGUAGE_CONFIG[normalizeLanguage(language)] || LANGUAGE_CONFIG.en;
+}
+
+function containsMyanmar(text = "") {
+  return /[\u1000-\u109F\uA9E0-\uA9FF]/.test(String(text || ""));
+}
+
+function normalizeMyanmarText(text = "") {
+  return String(text || "")
+    .replace(/\r/g, "")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\s*([၊။!?])/g, "$1")
+    .replace(/([၊။!?])(?=[^\s])/g, "$1 ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function splitLongMyanmarSegment(segment = "", maxLength = 90) {
+  const parts = [];
+  let remaining = String(segment || "").trim();
+
+  while (remaining.length > maxLength) {
+    let cutIndex = remaining.lastIndexOf(" ", maxLength);
+
+    if (cutIndex < Math.floor(maxLength * 0.45)) {
+      cutIndex = maxLength;
+    }
+
+    parts.push(remaining.slice(0, cutIndex).trim());
+    remaining = remaining.slice(cutIndex).trim();
+  }
+
+  if (remaining) {
+    parts.push(remaining);
+  }
+
+  return parts;
 }
 
 function splitTextForTts(text = "", language = "en") {
-  const normalized = String(text || "").replace(/\s+/g, " ").trim();
+  const lang = normalizeLanguage(language);
+  const normalized =
+    lang === "mm"
+      ? normalizeMyanmarText(text)
+      : String(text || "").replace(/\s+/g, " ").trim();
+
   if (!normalized) {
     return [];
   }
 
-  const maxLength = CHUNK_LIMITS[String(language || "en").toLowerCase()] || CHUNK_LIMITS.en;
-  const sentencePattern = language === "mm"
-    ? /[^။!?\n]+[။!?]?/g
-    : /[^.!?\n]+[.!?]?/g;
+  const maxLength = CHUNK_LIMITS[lang] || CHUNK_LIMITS.en;
+  const sentencePattern =
+    lang === "mm"
+      ? /[^။!?…\n]+[။!?…]?/g
+      : /[^.!?\n]+[.!?]?/g;
 
   const sentences = normalized.match(sentencePattern) || [normalized];
   const chunks = [];
@@ -59,30 +126,35 @@ function splitTextForTts(text = "", language = "en") {
 
   for (const rawSentence of sentences) {
     const sentence = String(rawSentence || "").trim();
-    if (!sentence) {
-      continue;
-    }
+    if (!sentence) continue;
 
     if (sentence.length > maxLength) {
       flushBuffer();
-      const words = sentence.split(" ");
-      let wordBuffer = "";
 
-      for (const word of words) {
-        const next = wordBuffer ? `${wordBuffer} ${word}` : word;
-        if (next.length <= maxLength) {
-          wordBuffer = next;
-        } else {
-          if (wordBuffer) {
-            chunks.push(wordBuffer.trim());
+      if (lang === "mm") {
+        const smallerParts = splitLongMyanmarSegment(sentence, maxLength);
+        for (const part of smallerParts) {
+          if (part) chunks.push(part);
+        }
+      } else {
+        const words = sentence.split(" ");
+        let wordBuffer = "";
+
+        for (const word of words) {
+          const next = wordBuffer ? `${wordBuffer} ${word}` : word;
+          if (next.length <= maxLength) {
+            wordBuffer = next;
+          } else {
+            if (wordBuffer) chunks.push(wordBuffer.trim());
+            wordBuffer = word;
           }
-          wordBuffer = word;
+        }
+
+        if (wordBuffer.trim()) {
+          chunks.push(wordBuffer.trim());
         }
       }
 
-      if (wordBuffer.trim()) {
-        chunks.push(wordBuffer.trim());
-      }
       continue;
     }
 
@@ -100,8 +172,30 @@ function splitTextForTts(text = "", language = "en") {
 }
 
 function buildTtsPrompt(text, language = "en", voiceName = "") {
-  const config = getLanguageConfig(language);
-  return `${config.stylePrompt}\n\nVoice direction: use a ${voiceName || "warm"} storyteller delivery with consistent pacing, clean pronunciation, and a polished narrative feel.\n\nStory:\n${String(text || "").trim()}`;
+  const lang = normalizeLanguage(language);
+  const config = getLanguageConfig(lang);
+  const cleanedText = lang === "mm" ? normalizeMyanmarText(text) : String(text || "").trim();
+
+  if (lang === "mm") {
+    return [
+      config.stylePrompt,
+      "",
+      `အသံပုံစံ: ${voiceName || "storyteller"} လို နွေးထွေးပြီး တည်ငြိမ်တဲ့ ပုံပြင်ပြောသံနဲ့ ဖတ်ပါ။`,
+      "အောက်ပါ မြန်မာစာကိုသာ ဖတ်ပါ။",
+      "",
+      "ဇာတ်လမ်း:",
+      cleanedText
+    ].join("\n");
+  }
+
+  return [
+    config.stylePrompt,
+    "",
+    `Voice direction: use a ${voiceName || "warm"} storyteller delivery with consistent pacing, clean pronunciation, and a polished narrative feel.`,
+    "",
+    "Story:",
+    cleanedText
+  ].join("\n");
 }
 
 function createWavHeader(dataLength, sampleRate = 24000, channels = 1, bitsPerSample = 16) {
@@ -132,16 +226,20 @@ function pcmBase64ToWavBase64(base64Pcm) {
   return Buffer.concat([wavHeader, pcmBuffer]).toString("base64");
 }
 
-async function callGeminiTts(apiKey, text, language = "en", voiceName = "Kore") {
-  const config = getLanguageConfig(language);
+async function callGeminiTts(apiKey, text, language = "en", voiceName = "Sulafat") {
+  const lang = normalizeLanguage(language);
+  const config = getLanguageConfig(lang);
+
   const response = await fetch(`${GEMINI_TTS_URL}?key=${apiKey}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      contents: [{
-        role: "user",
-        parts: [{ text: buildTtsPrompt(text, language, voiceName) }]
-      }],
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: buildTtsPrompt(text, lang, voiceName) }]
+        }
+      ],
       generationConfig: {
         responseModalities: ["AUDIO"],
         speechConfig: {
@@ -176,14 +274,22 @@ async function callGeminiTts(apiKey, text, language = "en", voiceName = "Kore") 
 }
 
 async function generateChunkWithFallback(apiKey, text, language = "en", chunkIndex = 0) {
-  const config = getLanguageConfig(language);
-  const voiceRotation = config.voices || LANGUAGE_CONFIG.en.voices;
+  const lang = normalizeLanguage(language);
+  const config = getLanguageConfig(lang);
+
+  // Put the calmest storyteller-like voice first for Burmese.
+  const voiceRotation =
+    lang === "mm"
+      ? ["Sulafat", "Achird", "Gacrux"]
+      : (config.voices || ["Sulafat", "Gacrux", "Achird"]);
+
   const attempts = [];
 
   for (let i = 0; i < voiceRotation.length; i += 1) {
     const voiceName = voiceRotation[(chunkIndex + i) % voiceRotation.length];
+
     try {
-      const audio = await callGeminiTts(apiKey, text, language, voiceName);
+      const audio = await callGeminiTts(apiKey, text, lang, voiceName);
       return {
         ...audio,
         chunkIndex,
@@ -221,7 +327,9 @@ exports.handler = async (event) => {
     }
 
     const { text = "", language = "en" } = JSON.parse(event.body || "{}");
-    const cleanedText = String(text || "").trim();
+    const lang = normalizeLanguage(language);
+    const cleanedText =
+      lang === "mm" ? normalizeMyanmarText(text) : String(text || "").trim();
 
     if (!cleanedText) {
       return {
@@ -231,7 +339,17 @@ exports.handler = async (event) => {
       };
     }
 
-    const chunks = splitTextForTts(cleanedText, language);
+    if (lang === "mm" && !containsMyanmar(cleanedText)) {
+      return {
+        statusCode: 400,
+        headers: CORS_HEADERS,
+        body: JSON.stringify({
+          error: "Myanmar voice mode requires Myanmar-script story text."
+        })
+      };
+    }
+
+    const chunks = splitTextForTts(cleanedText, lang);
     if (!chunks.length) {
       return {
         statusCode: 400,
@@ -242,7 +360,7 @@ exports.handler = async (event) => {
 
     const audioSegments = [];
     for (let i = 0; i < chunks.length; i += 1) {
-      const segment = await generateChunkWithFallback(apiKey, chunks[i], language, i);
+      const segment = await generateChunkWithFallback(apiKey, chunks[i], lang, i);
       audioSegments.push(segment);
     }
 
@@ -251,7 +369,7 @@ exports.handler = async (event) => {
       headers: CORS_HEADERS,
       body: JSON.stringify({
         mimeType: "audio/wav",
-        locale: getLanguageConfig(language).locale,
+        locale: getLanguageConfig(lang).locale,
         model: "gemini-2.5-flash-preview-tts",
         chunkCount: audioSegments.length,
         voicesUsed: [...new Set(audioSegments.map((segment) => segment.voiceName))],
