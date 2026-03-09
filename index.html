@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>Story Generator</title>
+</head>
+<body>
+    <main class="app">
+        <section class="card">
+            <div class="badge">Creative JavaScript App</div>
+            <h1>📝 Story Generator</h1>
+            <p class="subtitle">Create a fun story, fill it with random words, and listen to it with voice narration.</p>
+
+            <div class="grid">
+                <div class="field">
+                    <label for="adjective">Adjective</label>
+                    <input id="adjective" placeholder="tiny">
+                </div>
+                <div class="field">
+                    <label for="noun">Noun</label>
+                    <input id="noun" placeholder="dragon">
+                </div>
+                <div class="field">
+                    <label for="verb">Verb</label>
+                    <input id="verb" placeholder="dancing">
+                </div>
+                <div class="field">
+                    <label for="place">Place</label>
+                    <input id="place" placeholder="enchanted forest">
+                </div>
+                <div class="field">
+                    <label for="adjective2">Another adjective</label>
+                    <input id="adjective2" placeholder="sparkly">
+                </div>
+                <div class="field">
+                    <label for="noun2">Another noun</label>
+                    <input id="noun2" placeholder="cupcake">
+                </div>
+            </div>
+
+            <div class="actions">
+                <button class="primary" id="generateBtn">Generate Story</button>
+                <button class="secondary" id="randomBtn">🎲 Random Story</button>
+                <button class="secondary" id="speakBtn">🔊 Speak Story</button>
+                <button class="ghost" id="clearBtn">Clear</button>
+            </div>
+
+            <section class="story-box">
+                <h2>Your Story</h2>
+                <p id="output">Your magical story will appear here...</p>
+            </section>
+        </section>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
