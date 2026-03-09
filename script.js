@@ -43,7 +43,11 @@ const DEFAULT_OUTPUT = "Your AI story will appear here...";
 const HISTORY_KEY = "story-generator-history-v3";
 const THEME_KEY = "story-generator-theme";
 const API_ENDPOINT = "/.netlify/functions/generate-story";
+const SPEECH_API_ENDPOINT = "/.netlify/functions/generate-speech";
 const TYPING_SPEED = 16;
+
+let currentAudio = null;
+let isAiSpeaking = false;
 
 const SPEECH_LANGUAGE_MAP = {
     en: ["en-US", "en-GB", "en"],
@@ -441,6 +445,80 @@ async function requestStory({ random = false } = {}) {
     }
 }
 
+function setSpeakButtonState(isLoading = false) {
+    speakBtn.disabled = isLoading;
+    speakBtn.textContent = isLoading ? "🔊 Loading Voice..." : "🔊 Speak";
+}
+
+function stopCurrentAudio() {
+    if (currentAudio) {
+        currentAudio.pause();
+        currentAudio.currentTime = 0;
+        currentAudio = null;
+    }
+
+    if ("speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+    }
+
+    isAiSpeaking = false;
+    setSpeakButtonState(false);
+}
+
+async function requestAiSpeech(text) {
+    const response = await fetch(SPEECH_API_ENDPOINT, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            text,
+            language: currentLanguage
+        })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data?.audioBase64) {
+        throw new Error(data?.error || "Could not generate AI voice.");
+    }
+
+    return data;
+}
+
+async function playAiSpeech(text) {
+    setSpeakButtonState(true);
+    showStatus(currentLanguage === "mm" ? "Creating Myanmar AI voice..." : "Creating AI voice...");
+
+    try {
+        const data = await requestAiSpeech(text);
+        const audioSrc = `data:${data.mimeType || "audio/wav"};base64,${data.audioBase64}`;
+
+        stopCurrentAudio();
+        currentAudio = new Audio(audioSrc);
+        currentAudio.preload = "auto";
+        currentAudio.onended = () => {
+            isAiSpeaking = false;
+            setSpeakButtonState(false);
+            showStatus(currentLanguage === "mm" ? "Myanmar AI voice finished playing." : "AI voice finished playing.");
+        };
+        currentAudio.onerror = () => {
+            isAiSpeaking = false;
+            setSpeakButtonState(false);
+            showStatus(currentLanguage === "mm" ? "Could not play the Myanmar AI voice." : "Could not play the AI voice.", true);
+        };
+
+        await currentAudio.play();
+        isAiSpeaking = true;
+        setSpeakButtonState(false);
+        showStatus(currentLanguage === "mm" ? "Playing Myanmar AI voice." : "Playing AI voice.");
+        return true;
+    } catch (error) {
+        setSpeakButtonState(false);
+        throw error;
+    }
+}
+
 async function speakStory() {
     const storyText = (output.dataset.storyText || output.textContent || "").trim();
 
@@ -449,26 +527,44 @@ async function speakStory() {
         return;
     }
 
-    if (!("speechSynthesis" in window)) {
-        showStatus("Voice narration is not supported in this browser.", true);
+    if (isAiSpeaking && currentAudio) {
+        stopCurrentAudio();
+        showStatus("Voice stopped.");
         return;
     }
 
     try {
-        window.speechSynthesis.cancel();
-        const voices = await waitForVoices();
-        const selectedVoice = pickBestVoice(voices);
-
-        if (currentLanguage === "mm" && !selectedVoice) {
-            showStatus("Myanmar voice is not available in this browser right now.", true);
+        await playAiSpeech(storyText);
+    } catch (error) {
+        if (!("speechSynthesis" in window)) {
+            showStatus(error?.message || "Voice narration is not supported in this browser.", true);
             return;
         }
 
-        const chunks = splitStoryForSpeech(storyText);
-        await speakChunks(chunks, selectedVoice);
-        showStatus(currentLanguage === "mm" ? "Reading your Myanmar story out loud." : "Reading your story out loud.");
-    } catch {
-        showStatus(currentLanguage === "mm" ? "Could not read the Myanmar story in this browser." : "Could not read the story in this browser.", true);
+        try {
+            const voices = await waitForVoices();
+            const selectedVoice = pickBestVoice(voices);
+            const chunks = splitStoryForSpeech(storyText);
+
+            if (!chunks.length) {
+                throw new Error("No story available for speech.");
+            }
+
+            window.speechSynthesis.cancel();
+            await speakChunks(chunks, selectedVoice);
+            showStatus(
+                currentLanguage === "mm"
+                    ? "AI voice was unavailable, so browser voice is reading your Myanmar story."
+                    : "AI voice was unavailable, so browser voice is reading your story."
+            );
+        } catch {
+            showStatus(
+                error?.message || (currentLanguage === "mm"
+                    ? "Could not read the Myanmar story right now."
+                    : "Could not read the story right now."),
+                true
+            );
+        }
     }
 }
 
@@ -586,9 +682,7 @@ function clearAll() {
     output.textContent = DEFAULT_OUTPUT;
     output.dataset.storyText = DEFAULT_OUTPUT;
     activeTemplateLabel.textContent = "AI Story Mode";
-    if ("speechSynthesis" in window) {
-        window.speechSynthesis.cancel();
-    }
+    stopCurrentAudio();
     showStatus("Inputs cleared.");
 }
 
@@ -639,7 +733,10 @@ randomBtn.addEventListener("click", () => {
 speakBtn.addEventListener("click", speakStory);
 copyBtn.addEventListener("click", () => copyStory());
 shareBtn.addEventListener("click", shareStory);
-clearBtn.addEventListener("click", clearAll);
+clearBtn.addEventListener("click", () => {
+    stopCurrentAudio();
+    clearAll();
+});
 clearHistoryBtn.addEventListener("click", clearHistory);
 themeToggle.addEventListener("click", toggleTheme);
 
