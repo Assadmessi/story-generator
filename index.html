@@ -3,54 +3,102 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="A portfolio-ready story generator with random prompts, animations, story history, and voice narration.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
-    <title>Story Generator</title>
+    <title>Story Generator Pro</title>
 </head>
 <body>
-    <main class="app">
-        <section class="card">
-            <div class="badge">Creative JavaScript App</div>
-            <h1>📝 Story Generator</h1>
-            <p class="subtitle">Create a fun story, fill it with random words, and listen to it with voice narration.</p>
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+    <div class="bg-grid"></div>
 
-            <div class="grid">
-                <div class="field">
-                    <label for="adjective">Adjective</label>
+    <main class="app-shell">
+        <section class="hero reveal">
+            <div class="hero-badge">Creative JavaScript Mini App</div>
+            <h1>Story Generator <span>Pro</span></h1>
+            <p>
+                Turn simple words into fun stories with a polished UI, smooth animations,
+                random prompts, voice narration, and saved story history.
+            </p>
+        </section>
+
+        <section class="panel reveal">
+            <div class="panel-header">
+                <div>
+                    <p class="eyebrow">Build your story</p>
+                    <h2>Choose your words</h2>
+                </div>
+                <div class="status-pill" id="historyCount">0 stories saved</div>
+            </div>
+
+            <div class="input-grid">
+                <label class="field">
+                    <span>Adjective</span>
                     <input id="adjective" placeholder="tiny">
-                </div>
-                <div class="field">
-                    <label for="noun">Noun</label>
+                </label>
+                <label class="field">
+                    <span>Noun</span>
                     <input id="noun" placeholder="dragon">
-                </div>
-                <div class="field">
-                    <label for="verb">Verb</label>
+                </label>
+                <label class="field">
+                    <span>Verb</span>
                     <input id="verb" placeholder="dancing">
-                </div>
-                <div class="field">
-                    <label for="place">Place</label>
-                    <input id="place" placeholder="enchanted forest">
-                </div>
-                <div class="field">
-                    <label for="adjective2">Another adjective</label>
+                </label>
+                <label class="field">
+                    <span>Place</span>
+                    <input id="place" placeholder="moon garden">
+                </label>
+                <label class="field">
+                    <span>Another adjective</span>
                     <input id="adjective2" placeholder="sparkly">
-                </div>
-                <div class="field">
-                    <label for="noun2">Another noun</label>
+                </label>
+                <label class="field">
+                    <span>Another noun</span>
                     <input id="noun2" placeholder="cupcake">
-                </div>
+                </label>
             </div>
 
             <div class="actions">
-                <button class="primary" id="generateBtn">Generate Story</button>
-                <button class="secondary" id="randomBtn">🎲 Random Story</button>
-                <button class="secondary" id="speakBtn">🔊 Speak Story</button>
-                <button class="ghost" id="clearBtn">Clear</button>
+                <button id="generateBtn" class="btn btn-primary">Generate Story</button>
+                <button id="randomBtn" class="btn btn-secondary">🎲 Random Story</button>
+                <button id="speakBtn" class="btn btn-secondary">🔊 Speak Story</button>
+                <button id="clearBtn" class="btn btn-ghost">Clear</button>
             </div>
+        </section>
 
-            <section class="story-box">
-                <h2>Your Story</h2>
-                <p id="output">Your magical story will appear here...</p>
-            </section>
+        <section class="content-grid">
+            <article class="panel story-panel reveal">
+                <div class="panel-header">
+                    <div>
+                        <p class="eyebrow">Generated result</p>
+                        <h2>Your story</h2>
+                    </div>
+                    <div class="story-tag">Animated Output</div>
+                </div>
+
+                <div id="storyCard" class="story-card empty-state">
+                    <p id="output">Your generated story will appear here.</p>
+                </div>
+            </article>
+
+            <aside class="panel history-panel reveal">
+                <div class="panel-header">
+                    <div>
+                        <p class="eyebrow">Saved stories</p>
+                        <h2>Story history</h2>
+                    </div>
+                    <button id="clearHistoryBtn" class="text-btn">Clear history</button>
+                </div>
+
+                <div id="historyList" class="history-list">
+                    <div class="history-empty">
+                        No stories yet. Generate one to save it here.
+                    </div>
+                </div>
+            </aside>
         </section>
     </main>
 
