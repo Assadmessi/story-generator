@@ -45,44 +45,15 @@ const THEME_KEY = "story-generator-theme";
 const API_ENDPOINT = "/.netlify/functions/generate-story";
 const SPEECH_API_ENDPOINT = "/.netlify/functions/generate-speech";
 const TYPING_SPEED = 16;
-const VOICE_VARIANT_KEY = "story-generator-voice-variant-v1";
 
 let currentAudio = null;
+let currentAudioQueue = [];
 let isAiSpeaking = false;
 
 const SPEECH_LANGUAGE_MAP = {
     en: ["en-US", "en-GB", "en"],
     mm: ["my-MM", "my", "mym-MM", "mym"]
 };
-
-function getStoredVoiceVariant() {
-    try {
-        const saved = JSON.parse(localStorage.getItem(VOICE_VARIANT_KEY) || "{}");
-        const value = saved?.[currentLanguage];
-        return Number.isInteger(value) ? value : 0;
-    } catch {
-        return 0;
-    }
-}
-
-function advanceVoiceVariant() {
-    const currentVariant = getStoredVoiceVariant();
-    const nextVariant = (currentVariant + 1) % 3;
-
-    try {
-        const saved = JSON.parse(localStorage.getItem(VOICE_VARIANT_KEY) || "{}");
-        saved[currentLanguage] = nextVariant;
-        localStorage.setItem(VOICE_VARIANT_KEY, JSON.stringify(saved));
-    } catch {
-        localStorage.setItem(VOICE_VARIANT_KEY, JSON.stringify({ [currentLanguage]: nextVariant }));
-    }
-
-    return currentVariant;
-}
-
-function getVoiceDisplayName(voiceData = {}) {
-    return voiceData.voiceLabel || voiceData.voiceName || "Storyteller";
-}
 
 function getSpeechLang() {
     const candidates = SPEECH_LANGUAGE_MAP[currentLanguage] || [currentLanguage || "en-US", "en"];
@@ -475,9 +446,9 @@ async function requestStory({ random = false } = {}) {
     }
 }
 
-function setSpeakButtonState(isLoading = false) {
+function setSpeakButtonState(isLoading = false, label = "🔊 Speak") {
     speakBtn.disabled = isLoading;
-    speakBtn.textContent = isLoading ? "🔊 Loading Voice..." : "🔊 Speak";
+    speakBtn.textContent = isLoading ? label : "🔊 Speak";
 }
 
 function stopCurrentAudio() {
@@ -486,6 +457,8 @@ function stopCurrentAudio() {
         currentAudio.currentTime = 0;
         currentAudio = null;
     }
+
+    currentAudioQueue = [];
 
     if ("speechSynthesis" in window) {
         window.speechSynthesis.cancel();
@@ -503,49 +476,97 @@ async function requestAiSpeech(text) {
         },
         body: JSON.stringify({
             text,
-            language: currentLanguage,
-            voiceVariant: advanceVoiceVariant()
+            language: currentLanguage
         })
     });
 
     const data = await response.json();
 
-    if (!response.ok || !data?.audioBase64) {
+    if (!response.ok || !Array.isArray(data?.audioSegments) || !data.audioSegments.length) {
         throw new Error(data?.error || "Could not generate AI voice.");
     }
 
     return data;
 }
 
+function buildAudioQueue(segments = [], defaultMimeType = "audio/wav") {
+    return segments.map((segment, index) => ({
+        index,
+        voiceName: segment.voiceName || "Storyteller",
+        src: `data:${segment.mimeType || defaultMimeType};base64,${segment.audioBase64}`
+    }));
+}
+
+function playQueuedAudio(queue = []) {
+    return new Promise((resolve, reject) => {
+        if (!queue.length) {
+            resolve();
+            return;
+        }
+
+        let activeIndex = 0;
+        currentAudioQueue = queue.slice();
+
+        const playNext = async () => {
+            if (!currentAudioQueue.length || activeIndex >= currentAudioQueue.length) {
+                currentAudio = null;
+                resolve();
+                return;
+            }
+
+            const item = currentAudioQueue[activeIndex];
+            currentAudio = new Audio(item.src);
+            currentAudio.preload = "auto";
+
+            currentAudio.onended = () => {
+                activeIndex += 1;
+                if (activeIndex < currentAudioQueue.length) {
+                    setSpeakButtonState(true, `🔊 Playing ${activeIndex + 1}/${currentAudioQueue.length}...`);
+                }
+                playNext().catch(reject);
+            };
+
+            currentAudio.onerror = () => {
+                reject(new Error("Audio playback failed."));
+            };
+
+            try {
+                await currentAudio.play();
+            } catch (error) {
+                reject(error);
+            }
+        };
+
+        playNext().catch(reject);
+    });
+}
+
 async function playAiSpeech(text) {
-    setSpeakButtonState(true);
-    showStatus(currentLanguage === "mm" ? "Creating Myanmar AI voice..." : "Creating AI voice...");
+    setSpeakButtonState(true, "🔊 Creating Voice...");
+    showStatus(currentLanguage === "mm" ? "Creating Myanmar storytelling voice..." : "Creating storytelling voice...");
 
     try {
         const data = await requestAiSpeech(text);
-        const audioSrc = `data:${data.mimeType || "audio/wav"};base64,${data.audioBase64}`;
+        const audioQueue = buildAudioQueue(data.audioSegments, data.mimeType || "audio/wav");
 
         stopCurrentAudio();
-        currentAudio = new Audio(audioSrc);
-        const voiceDisplayName = getVoiceDisplayName(data);
-        currentAudio.preload = "auto";
-        currentAudio.onended = () => {
-            isAiSpeaking = false;
-            setSpeakButtonState(false);
-            showStatus(currentLanguage === "mm" ? `${voiceDisplayName} finished playing your Myanmar story.` : `${voiceDisplayName} finished playing your story.`);
-        };
-        currentAudio.onerror = () => {
-            isAiSpeaking = false;
-            setSpeakButtonState(false);
-            showStatus(currentLanguage === "mm" ? "Could not play the Myanmar AI voice." : "Could not play the AI voice.", true);
-        };
-
-        await currentAudio.play();
         isAiSpeaking = true;
+        setSpeakButtonState(true, `🔊 Playing 1/${audioQueue.length}...`);
+
+        const voicesUsed = Array.isArray(data.voicesUsed) ? data.voicesUsed.filter(Boolean) : [];
+        showStatus(
+            currentLanguage === "mm"
+                ? `Playing Myanmar storyteller voice${voicesUsed.length ? ` (${voicesUsed.slice(0, 3).join(", ")})` : ""}.`
+                : `Playing storyteller voice${voicesUsed.length ? ` (${voicesUsed.slice(0, 3).join(", ")})` : ""}.`
+        );
+
+        await playQueuedAudio(audioQueue);
+        isAiSpeaking = false;
         setSpeakButtonState(false);
-        showStatus(currentLanguage === "mm" ? `Playing ${voiceDisplayName} for your Myanmar story.` : `Playing ${voiceDisplayName} for your story.`);
+        showStatus(currentLanguage === "mm" ? "Myanmar AI storyteller voice finished playing." : "AI storyteller voice finished playing.");
         return true;
     } catch (error) {
+        isAiSpeaking = false;
         setSpeakButtonState(false);
         throw error;
     }

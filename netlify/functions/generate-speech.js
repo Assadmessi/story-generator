@@ -7,63 +7,101 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Methods": "POST, OPTIONS"
 };
 
+// Gemini TTS supports a shared pool of prebuilt voices. There is no documented
+// "Daniel" voice, so we use a small storyteller-style rotation that aims for a
+// similarly warm, mature, narrative feel.
 const LANGUAGE_CONFIG = {
   en: {
-    locale: "en-US",
-    voices: [
-      {
-        voiceName: "Kore",
-        label: "Storyteller 1",
-        stylePrompt: "Read this story out loud in warm, natural, expressive English. Make it feel like a polished storyteller voice. Keep the pacing smooth, clear, and pleasant. Speak only the story text with no extra introduction or commentary."
-      },
-      {
-        voiceName: "Aoede",
-        label: "Storyteller 2",
-        stylePrompt: "Read this story out loud in breezy, cinematic English with a gentle storytelling feel. Keep it smooth, emotionally natural, and easy to follow. Speak only the story text with no extra introduction or commentary."
-      },
-      {
-        voiceName: "Umbriel",
-        label: "Storyteller 3",
-        stylePrompt: "Read this story out loud in calm, easy-going English with a rich bedtime-story rhythm. Keep the delivery smooth, warm, and immersive. Speak only the story text with no extra introduction or commentary."
-      }
-    ]
+    locale: "en",
+    voices: ["Gacrux", "Sulafat", "Achird"],
+    stylePrompt:
+      "Read this story out loud in expressive, cinematic English with a warm storyteller tone. Keep it smooth, natural, immersive, and slightly dramatic without becoming exaggerated. Speak only the story text."
   },
   mm: {
-    locale: "my-MM",
-    voices: [
-      {
-        voiceName: "Puck",
-        label: "Storyteller 1",
-        stylePrompt: "Read this story out loud in natural Burmese (Myanmar language) with a warm, vivid storytelling tone. Keep the pacing smooth, clear, expressive, and pleasant. Speak only the story text with no extra introduction or commentary."
-      },
-      {
-        voiceName: "Kore",
-        label: "Storyteller 2",
-        stylePrompt: "Read this story out loud in natural Burmese (Myanmar language) with a steady, polished storyteller voice. Keep the delivery clear, emotionally smooth, and easy to follow. Speak only the story text with no extra introduction or commentary."
-      },
-      {
-        voiceName: "Aoede",
-        label: "Storyteller 3",
-        stylePrompt: "Read this story out loud in natural Burmese (Myanmar language) with a gentle, cinematic storytelling style. Keep it smooth, warm, and immersive. Speak only the story text with no extra introduction or commentary."
-      }
-    ]
+    locale: "my",
+    voices: ["Gacrux", "Sulafat", "Achird"],
+    stylePrompt:
+      "Read this story out loud in natural Burmese with a warm storyteller tone. Keep it smooth, expressive, clear, and immersive. Speak only the story text with no extra introduction or commentary."
   }
 };
 
+const CHUNK_LIMITS = {
+  en: 260,
+  mm: 170
+};
+
 function getLanguageConfig(language = "en") {
-  return LANGUAGE_CONFIG[language] || LANGUAGE_CONFIG.en;
+  return LANGUAGE_CONFIG[String(language || "en").toLowerCase()] || LANGUAGE_CONFIG.en;
 }
 
-function getVoiceSequence(language = "en", voiceVariant = 0) {
+function splitTextForTts(text = "", language = "en") {
+  const normalized = String(text || "").replace(/\s+/g, " ").trim();
+  if (!normalized) {
+    return [];
+  }
+
+  const maxLength = CHUNK_LIMITS[String(language || "en").toLowerCase()] || CHUNK_LIMITS.en;
+  const sentencePattern = language === "mm"
+    ? /[^။!?\n]+[။!?]?/g
+    : /[^.!?\n]+[.!?]?/g;
+
+  const sentences = normalized.match(sentencePattern) || [normalized];
+  const chunks = [];
+  let buffer = "";
+
+  const flushBuffer = () => {
+    const value = buffer.trim();
+    if (value) {
+      chunks.push(value);
+    }
+    buffer = "";
+  };
+
+  for (const rawSentence of sentences) {
+    const sentence = String(rawSentence || "").trim();
+    if (!sentence) {
+      continue;
+    }
+
+    if (sentence.length > maxLength) {
+      flushBuffer();
+      const words = sentence.split(" ");
+      let wordBuffer = "";
+
+      for (const word of words) {
+        const next = wordBuffer ? `${wordBuffer} ${word}` : word;
+        if (next.length <= maxLength) {
+          wordBuffer = next;
+        } else {
+          if (wordBuffer) {
+            chunks.push(wordBuffer.trim());
+          }
+          wordBuffer = word;
+        }
+      }
+
+      if (wordBuffer.trim()) {
+        chunks.push(wordBuffer.trim());
+      }
+      continue;
+    }
+
+    const nextBuffer = buffer ? `${buffer} ${sentence}` : sentence;
+    if (nextBuffer.length <= maxLength) {
+      buffer = nextBuffer;
+    } else {
+      flushBuffer();
+      buffer = sentence;
+    }
+  }
+
+  flushBuffer();
+  return chunks;
+}
+
+function buildTtsPrompt(text, language = "en", voiceName = "") {
   const config = getLanguageConfig(language);
-  const voices = Array.isArray(config.voices) && config.voices.length ? config.voices : LANGUAGE_CONFIG.en.voices;
-  const normalizedIndex = Number.isInteger(voiceVariant) ? voiceVariant : Number.parseInt(voiceVariant, 10) || 0;
-  const startIndex = ((normalizedIndex % voices.length) + voices.length) % voices.length;
-  return voices.slice(startIndex).concat(voices.slice(0, startIndex));
-}
-
-function buildTtsPrompt(text, preset) {
-  return `${preset.stylePrompt}\n\nStory:\n${String(text || "").trim()}`;
+  return `${config.stylePrompt}\n\nVoice direction: use a ${voiceName || "warm"} storyteller delivery with consistent pacing, clean pronunciation, and a polished narrative feel.\n\nStory:\n${String(text || "").trim()}`;
 }
 
 function createWavHeader(dataLength, sampleRate = 24000, channels = 1, bitsPerSample = 16) {
@@ -88,85 +126,28 @@ function createWavHeader(dataLength, sampleRate = 24000, channels = 1, bitsPerSa
   return buffer;
 }
 
-function pcmBufferToWavBase64(pcmBuffer) {
+function pcmBase64ToWavBase64(base64Pcm) {
+  const pcmBuffer = Buffer.from(base64Pcm, "base64");
   const wavHeader = createWavHeader(pcmBuffer.length);
   return Buffer.concat([wavHeader, pcmBuffer]).toString("base64");
 }
 
-function splitTextForTts(text = "", language = "en") {
-  const normalized = String(text || "").replace(/\s+/g, " ").trim();
-  if (!normalized) {
-    return [];
-  }
-
-  const sentencePattern = language === "mm" ? /[^။!?\n]+[။!?]?/g : /[^.!?\n]+[.!?]?/g;
-  const sentences = normalized.match(sentencePattern) || [normalized];
-  const chunks = [];
-  let buffer = "";
-  const maxChunkLength = language === "mm" ? 260 : 320;
-
-  for (const rawSentence of sentences) {
-    const sentence = String(rawSentence || "").trim();
-    if (!sentence) {
-      continue;
-    }
-
-    const candidate = buffer ? `${buffer} ${sentence}` : sentence;
-    if (candidate.length <= maxChunkLength) {
-      buffer = candidate;
-      continue;
-    }
-
-    if (buffer) {
-      chunks.push(buffer);
-      buffer = "";
-    }
-
-    if (sentence.length <= maxChunkLength) {
-      buffer = sentence;
-      continue;
-    }
-
-    const words = sentence.split(" ");
-    let wordBuffer = "";
-    for (const word of words) {
-      const wordCandidate = wordBuffer ? `${wordBuffer} ${word}` : word;
-      if (wordCandidate.length <= maxChunkLength) {
-        wordBuffer = wordCandidate;
-      } else {
-        if (wordBuffer) {
-          chunks.push(wordBuffer);
-        }
-        wordBuffer = word;
-      }
-    }
-    if (wordBuffer) {
-      buffer = wordBuffer;
-    }
-  }
-
-  if (buffer) {
-    chunks.push(buffer);
-  }
-
-  return chunks.filter(Boolean);
-}
-
-async function callGeminiTtsChunk(apiKey, text, preset) {
+async function callGeminiTts(apiKey, text, language = "en", voiceName = "Kore") {
+  const config = getLanguageConfig(language);
   const response = await fetch(`${GEMINI_TTS_URL}?key=${apiKey}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       contents: [{
         role: "user",
-        parts: [{ text: buildTtsPrompt(text, preset) }]
+        parts: [{ text: buildTtsPrompt(text, language, voiceName) }]
       }],
       generationConfig: {
         responseModalities: ["AUDIO"],
         speechConfig: {
           voiceConfig: {
             prebuiltVoiceConfig: {
-              voiceName: preset.voiceName
+              voiceName
             }
           }
         }
@@ -185,43 +166,35 @@ async function callGeminiTtsChunk(apiKey, text, preset) {
     throw new Error("No audio was returned from Gemini TTS.");
   }
 
-  return Buffer.from(base64Pcm, "base64");
+  return {
+    audioBase64: pcmBase64ToWavBase64(base64Pcm),
+    mimeType: "audio/wav",
+    voiceName,
+    locale: config.locale,
+    model: "gemini-2.5-flash-preview-tts"
+  };
 }
 
-async function callGeminiTts(apiKey, text, language = "en", voiceVariant = 0) {
+async function generateChunkWithFallback(apiKey, text, language = "en", chunkIndex = 0) {
   const config = getLanguageConfig(language);
-  const textChunks = splitTextForTts(text, language);
+  const voiceRotation = config.voices || LANGUAGE_CONFIG.en.voices;
+  const attempts = [];
 
-  if (!textChunks.length) {
-    throw new Error("Missing story text.");
-  }
-
-  const voiceSequence = getVoiceSequence(language, voiceVariant);
-  let lastError = null;
-
-  for (const preset of voiceSequence) {
+  for (let i = 0; i < voiceRotation.length; i += 1) {
+    const voiceName = voiceRotation[(chunkIndex + i) % voiceRotation.length];
     try {
-      const pcmParts = [];
-      for (const chunk of textChunks) {
-        const pcmChunk = await callGeminiTtsChunk(apiKey, chunk, preset);
-        pcmParts.push(pcmChunk);
-      }
-
-      const mergedPcm = Buffer.concat(pcmParts);
+      const audio = await callGeminiTts(apiKey, text, language, voiceName);
       return {
-        audioBase64: pcmBufferToWavBase64(mergedPcm),
-        mimeType: "audio/wav",
-        voiceName: preset.voiceName,
-        voiceLabel: preset.label,
-        locale: config.locale,
-        model: "gemini-2.5-flash-preview-tts"
+        ...audio,
+        chunkIndex,
+        text
       };
     } catch (error) {
-      lastError = error;
+      attempts.push(`${voiceName}: ${error?.message || "failed"}`);
     }
   }
 
-  throw lastError || new Error("Failed to generate speech.");
+  throw new Error(`All storyteller voices failed for chunk ${chunkIndex + 1}. ${attempts.join(" | ")}`);
 }
 
 exports.handler = async (event) => {
@@ -247,7 +220,7 @@ exports.handler = async (event) => {
       };
     }
 
-    const { text = "", language = "en", voiceVariant = 0 } = JSON.parse(event.body || "{}");
+    const { text = "", language = "en" } = JSON.parse(event.body || "{}");
     const cleanedText = String(text || "").trim();
 
     if (!cleanedText) {
@@ -258,12 +231,32 @@ exports.handler = async (event) => {
       };
     }
 
-    const audio = await callGeminiTts(apiKey, cleanedText, language, voiceVariant);
+    const chunks = splitTextForTts(cleanedText, language);
+    if (!chunks.length) {
+      return {
+        statusCode: 400,
+        headers: CORS_HEADERS,
+        body: JSON.stringify({ error: "Could not prepare the story for speech." })
+      };
+    }
+
+    const audioSegments = [];
+    for (let i = 0; i < chunks.length; i += 1) {
+      const segment = await generateChunkWithFallback(apiKey, chunks[i], language, i);
+      audioSegments.push(segment);
+    }
 
     return {
       statusCode: 200,
       headers: CORS_HEADERS,
-      body: JSON.stringify(audio)
+      body: JSON.stringify({
+        mimeType: "audio/wav",
+        locale: getLanguageConfig(language).locale,
+        model: "gemini-2.5-flash-preview-tts",
+        chunkCount: audioSegments.length,
+        voicesUsed: [...new Set(audioSegments.map((segment) => segment.voiceName))],
+        audioSegments
+      })
     };
   } catch (error) {
     return {
