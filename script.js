@@ -55,6 +55,21 @@ const SPEECH_LANGUAGE_MAP = {
     mm: ["my-MM", "my", "mym-MM", "mym"]
 };
 
+
+function normalizeRequestedLanguage(language = "en") {
+    const value = String(language || "en").trim().toLowerCase();
+
+    if (value === "mm" || value === "my" || value === "my-mm" || value === "burmese") {
+        return "my";
+    }
+
+    return "en";
+}
+
+function containsMyanmarText(text = "") {
+    return /[က-႟ꧠ-꧿]/.test(String(text || ""));
+}
+
 function getSpeechLang() {
     const candidates = SPEECH_LANGUAGE_MAP[currentLanguage] || [currentLanguage || "en-US", "en"];
     return candidates[0];
@@ -476,7 +491,7 @@ async function requestAiSpeech(text) {
         },
         body: JSON.stringify({
             text,
-            language: currentLanguage
+            language: normalizeRequestedLanguage(currentLanguage)
         })
     });
 
@@ -577,6 +592,11 @@ async function speakStory() {
 
     if (!storyText || storyText === DEFAULT_OUTPUT) {
         showStatus("Generate a story first.", true);
+        return;
+    }
+
+    if (currentLanguage === "mm" && !containsMyanmarText(storyText)) {
+        showStatus("Myanmar story text is not ready in Burmese yet.", true);
         return;
     }
 

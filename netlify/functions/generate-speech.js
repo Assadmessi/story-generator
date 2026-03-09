@@ -14,7 +14,7 @@ const CORS_HEADERS = {
 const LANGUAGE_CONFIG = {
   en: {
     locale: "en",
-    voices: ["Sulafat", "Gacrux", "Achird"],
+    voices: ["Sulafat", "Achird", "Gacrux"],
     stylePrompt:
       [
         "You are a warm, mature storytelling narrator.",
@@ -26,7 +26,7 @@ const LANGUAGE_CONFIG = {
   },
   mm: {
     locale: "my",
-    voices: ["Sulafat", "Gacrux", "Achird"],
+    voices: ["Sulafat", "Achird", "Gacrux"],
     stylePrompt:
       [
         "သင်သည် နွေးထွေးပြီး တည်ငြိမ်တဲ့ ပုံပြင်ပြောသူတစ်ယောက် ဖြစ်သည်။",
