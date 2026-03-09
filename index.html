@@ -3,129 +3,118 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="A portfolio-ready story generator with random prompts, animations, story history, voice narration, and downloadable story cards.">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <meta name="theme-color" content="#0f172a">
     <link rel="stylesheet" href="style.css">
-    <title>Story Generator Pro</title>
+    <title>Story Generator Studio</title>
 </head>
 <body>
-    <div class="bg-orb orb-1"></div>
-    <div class="bg-orb orb-2"></div>
-    <div class="bg-grid"></div>
+    <div class="bg-orb orb-1" aria-hidden="true"></div>
+    <div class="bg-orb orb-2" aria-hidden="true"></div>
+    <div class="bg-grid" aria-hidden="true"></div>
 
-    <main class="app-shell">
+    <main class="app">
         <section class="hero reveal">
-            <div class="hero-badge">Creative JavaScript Mini App</div>
-            <h1>Story Generator</h1>
-            <p>
-                Turn simple words into fun stories with a polished UI, smooth animations,
-                random prompts, voice narration, saved history, and downloadable story cards.
-            </p>
-        </section>
-
-        <section class="panel reveal">
-            <div class="panel-header">
-                <div>
-                    <p class="eyebrow">Build your story</p>
-                    <h2>Choose your words</h2>
-                </div>
-                <div class="status-pill" id="historyCount">0 stories saved</div>
+            <div>
+                <span class="badge">JavaScript Project</span>
+                <h1>Story Generator Studio</h1>
+                <p class="subtitle">An interactive storytelling app with animated UI, dark and light themes, random prompts, voice narration, share actions, and persistent story history.</p>
             </div>
 
-            <div class="input-grid">
-                <label class="field">
-                    <span>Adjective</span>
-                    <input id="adjective" placeholder="tiny">
-                </label>
-                <label class="field">
-                    <span>Noun</span>
-                    <input id="noun" placeholder="dragon">
-                </label>
-                <label class="field">
-                    <span>Verb</span>
-                    <input id="verb" placeholder="dancing">
-                </label>
-                <label class="field">
-                    <span>Place</span>
-                    <input id="place" placeholder="moon garden">
-                </label>
-                <label class="field">
-                    <span>Another adjective</span>
-                    <input id="adjective2" placeholder="sparkly">
-                </label>
-                <label class="field">
-                    <span>Another noun</span>
-                    <input id="noun2" placeholder="cupcake">
-                </label>
-            </div>
-
-            <div class="actions">
-                <button id="generateBtn" class="btn btn-primary">Generate Story</button>
-                <button id="randomBtn" class="btn btn-secondary">🎲 Random Story</button>
-                <button id="speakBtn" class="btn btn-secondary">🔊 Speak Story</button>
-                <button id="clearBtn" class="btn btn-ghost">Clear</button>
+            <div class="hero-actions">
+                <button class="icon-btn" id="themeToggle" type="button" aria-label="Toggle dark and light mode">
+                    <span id="themeIcon">🌙</span>
+                    <span id="themeText">Dark Mode</span>
+                </button>
             </div>
         </section>
 
-        <section class="content-grid">
-            <article class="panel story-panel reveal">
+        <section class="workspace">
+            <section class="panel reveal delay-1">
                 <div class="panel-header">
                     <div>
-                        <p class="eyebrow">Generated result</p>
+                        <p class="eyebrow">Create</p>
+                        <h2>Build your story</h2>
+                    </div>
+                    <div class="template-wrap">
+                        <label for="templateSelect">Template</label>
+                        <select id="templateSelect">
+                            <option value="fantasy">Fantasy</option>
+                            <option value="adventure">Adventure</option>
+                            <option value="sci-fi">Sci‑Fi</option>
+                            <option value="funny">Funny</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid">
+                    <div class="field">
+                        <label for="adjective">Adjective</label>
+                        <input id="adjective" placeholder="tiny">
+                    </div>
+                    <div class="field">
+                        <label for="noun">Noun</label>
+                        <input id="noun" placeholder="dragon">
+                    </div>
+                    <div class="field">
+                        <label for="verb">Verb</label>
+                        <input id="verb" placeholder="dancing">
+                    </div>
+                    <div class="field">
+                        <label for="place">Place</label>
+                        <input id="place" placeholder="enchanted forest">
+                    </div>
+                    <div class="field">
+                        <label for="adjective2">Another adjective</label>
+                        <input id="adjective2" placeholder="sparkly">
+                    </div>
+                    <div class="field">
+                        <label for="noun2">Another noun</label>
+                        <input id="noun2" placeholder="cupcake">
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <button class="primary" id="generateBtn" type="button">Generate Story</button>
+                    <button class="secondary" id="randomBtn" type="button">🎲 Random</button>
+                    <button class="secondary" id="speakBtn" type="button">🔊 Speak</button>
+                    <button class="secondary" id="copyBtn" type="button">📋 Copy</button>
+                    <button class="secondary" id="shareBtn" type="button">📤 Share</button>
+                    <button class="ghost" id="clearBtn" type="button">Clear</button>
+                </div>
+
+                <p id="statusMessage" class="status-message" aria-live="polite"></p>
+            </section>
+
+            <section class="panel output-panel reveal delay-2">
+                <div class="panel-header compact">
+                    <div>
+                        <p class="eyebrow">Preview</p>
                         <h2>Your story</h2>
                     </div>
-                    <div class="story-tag">Export-ready Card</div>
+                    <span class="template-pill" id="activeTemplateLabel">Fantasy Template</span>
                 </div>
 
-                <div id="storyCard" class="story-card empty-state">
-                    <div class="card-decoration card-decoration-1"></div>
-                    <div class="card-decoration card-decoration-2"></div>
+                <article class="story-box" id="storyBox">
+                    <p id="output">Your magical story will appear here...</p>
+                </article>
+            </section>
+        </section>
 
-                    <div class="story-card-top">
-                        <div>
-                            <p class="story-card-label">Story Card</p>
-                            <h3 id="storyTitle">Generate your next adventure</h3>
-                        </div>
-                        <div class="story-card-badge">Portfolio Project</div>
-                    </div>
-
-                    <p id="output">Your generated story will appear here.</p>
-
-                    <div class="story-card-footer">
-                        <span id="storyMeta">Ready for PNG and PDF export</span>
-                        <span class="story-watermark">Story Generator Pro</span>
-                    </div>
+        <section class="panel history-panel reveal delay-3">
+            <div class="panel-header compact">
+                <div>
+                    <p class="eyebrow">History</p>
+                    <h2>Saved stories</h2>
                 </div>
+                <button class="ghost small" id="clearHistoryBtn" type="button">Clear History</button>
+            </div>
 
-                <div class="export-actions">
-                    <button id="downloadPngBtn" class="btn btn-secondary">🖼️ Download PNG</button>
-                    <button id="downloadPdfBtn" class="btn btn-secondary">📄 Download PDF</button>
-                </div>
-                <p id="exportStatus" class="export-status">Generate a story to unlock polished exports.</p>
-            </article>
-
-            <aside class="panel history-panel reveal">
-                <div class="panel-header">
-                    <div>
-                        <p class="eyebrow">Saved stories</p>
-                        <h2>Story history</h2>
-                    </div>
-                    <button id="clearHistoryBtn" class="text-btn">Clear history</button>
-                </div>
-
-                <div id="historyList" class="history-list">
-                    <div class="history-empty">
-                        No stories yet. Generate one to save it here.
-                    </div>
-                </div>
-            </aside>
+            <div id="historyList" class="history-list">
+                <p class="empty-history">No saved stories yet. Generate one to build your collection.</p>
+            </div>
         </section>
     </main>
 
-    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
