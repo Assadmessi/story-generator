@@ -76,6 +76,7 @@ function buildPrompt(inputs, random, language = "en") {
 
   return `You are a warm, natural creative storyteller.
 ${languageInstruction}
+${isMyanmarLanguage(language) ? "Use only Myanmar script for the full story. Do not write the story in English, romanized Burmese, or mixed language except for names the user already entered." : ""}
 The story must feel natural and never awkward, robotic, childish, or template-based.
 If any of the user words are strange, misspelled, or grammatically messy, intelligently smooth them into the story without making the writing feel weird.
 
@@ -125,7 +126,28 @@ function safeJsonParse(text) {
   return JSON.parse(sliced);
 }
 
-function buildFallbackStory(inputs) {
+
+function isMyanmarLanguage(language = "en") {
+  return String(language || "").toLowerCase() === "mm";
+}
+
+function looksLikeMyanmarText(text = "") {
+  return /[က-႟ꧠ-꧿]/.test(String(text || ""));
+}
+
+function buildMyanmarFallbackStory(inputs) {
+  const { adjective, noun, verb, place, adjective2, noun2 } = inputs;
+  const protagonist = noun && noun.trim() ? noun.trim() : "ခရီးသွား";
+  const prefix = /^[A-Z]/.test(protagonist) ? protagonist : `${adjective} ${protagonist}`.trim();
+  const subject = /^[A-Z]/.test(protagonist) ? protagonist : `အဲဒီ ${protagonist}`;
+  return ` ${place} ရဲ့အလယ်ဗဟိုမှာ ${prefix} က ${verb} လုပ်တတ်သူတစ်ယောက်အဖြစ် လူသိများနေခဲ့တယ်။ ညနေကောင်းကင်အရောင်ပြောင်းတိုင်း လူတွေက အဲဒီမြင်ကွင်းကို ကြည့်ပြီး ပြုံးမိကြပေမယ့် ${adjective2} ${noun2} တစ်ခု ရောက်လာပြီး အရာအားလုံးကို တိတ်တဆိတ် ပြောင်းလဲမယ်လို့ ဘယ်သူမှ မထင်ခဲ့ကြဘူး။ တစ်နေ့မှာ မြို့ရဲ့ငြိမ်းချမ်းမှုကို ထိခိုက်စေနိုင်တဲ့ ပြဿနာတစ်ခု ပေါ်လာတော့ ${subject} က ${noun2} ချန်ထားခဲ့တဲ့ အမှတ်အသားကို လိုက်သွားပြီး တကယ့်သတ္တိဆိုတာ အမြဲတမ်း ဆူညံပြီး ကြီးကျယ်နေဖို့ မလိုအပ်ဘူးဆိုတာ နားလည်လာတယ်။ တစ်ခါတစ်ရံ သတ္တိဆိုတာ စိတ်တည်ငြိမ်နေဖို့၊ နောက်ထပ် တစ်လှမ်း ဆက်လှမ်းဖို့နဲ့ တခြားသူတွေကို မျှော်လင့်ချက် ပြန်ယုံကြည်လာအောင် ကူညီပေးဖို့ပဲ ဖြစ်တယ်။ မနက်မိုးလင်းချိန်ရောက်တော့ အန္တရာယ်က ပြေလည်သွားပြီး လမ်းမများပေါ်မှာ စိတ်သက်သာရာရတဲ့ ရယ်သံတွေ ပြန်ပြည့်လာခဲ့တယ်။ ${subject} လည်း တောက်ပလာတဲ့ မိုးကောင်းကင်အောက်မှာ ရည်ရွယ်ချက်အသစ်တစ်ခုနဲ့ ရပ်နေခဲ့တယ်။ အဲဒီနေ့ကစပြီး လူတွေက ဒီပုံပြင်ကို မှတ်မိနေကြတာ မမှော်ဆန်လို့တင် မဟုတ်ဘဲ နှလုံးသားနဲ့သယ်ဆောင်လာတဲ့ သေးငယ်တဲ့ မီးစတစ်စကတောင် လောကတစ်ခုလုံးကို လင်းပေးနိုင်တယ်ဆိုတဲ့ အမှန်တရားကို ခံစားမိလို့ပါ။`.trim();
+}
+
+function buildFallbackStory(inputs, language = "en") {
+  if (isMyanmarLanguage(language)) {
+    return buildMyanmarFallbackStory(inputs);
+  }
+
   const { adjective, noun, verb, place, adjective2, noun2 } = inputs;
   const protagonist = noun && noun.trim() ? noun.trim() : "traveler";
   return `In the heart of ${place}, ${/^[A-Z]/.test(protagonist) ? protagonist : `a ${adjective} ${protagonist}` } became known for ${verb} whenever the evening sky changed color. Most people smiled at the sight, but no one expected that a ${adjective2} ${noun2} would arrive and quietly change everything. When a sudden problem threatened the peace of the place, ${/^[A-Z]/.test(protagonist) ? protagonist : `the ${protagonist}` } followed the strange clue left behind by the ${noun2} and discovered that courage did not always look loud or dramatic. Sometimes it looked like staying calm, taking one more step, and helping others believe again. By dawn, the danger had passed, the streets were full of relieved laughter, and ${/^[A-Z]/.test(protagonist) ? protagonist : `the ${protagonist}` } stood beneath the brightening sky with a new sense of purpose. From that day on, people remembered the story not only because it was magical, but because it felt true: even the smallest spark, carried with heart, can light an entire world.`;
@@ -199,13 +221,17 @@ exports.handler = async (event) => {
       const parsed = safeJsonParse(text);
       story = String(parsed?.story || "").trim();
       normalizedInputs = buildInputs(parsed?.normalizedInputs || inputs, false);
+
+      if (isMyanmarLanguage(language) && !looksLikeMyanmarText(story)) {
+        throw new Error("Myanmar story was not returned in Myanmar text.");
+      }
     } catch (error) {
-      story = buildFallbackStory(inputs);
+      story = buildFallbackStory(inputs, language);
       normalizedInputs = inputs;
     }
 
     if (!story) {
-      story = buildFallbackStory(inputs);
+      story = buildFallbackStory(inputs, language);
     }
 
     const highlightTerms = fieldOrder

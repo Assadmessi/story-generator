@@ -26,10 +26,10 @@ const shareFacebookBtn = document.getElementById("shareFacebook");
 const shareWhatsAppBtn = document.getElementById("shareWhatsApp");
 const shareViberBtn = document.getElementById("shareViber");
 const languageSelect = document.getElementById("languageSelect");
-let currentLanguage="en";
+let currentLanguage = languageSelect ? languageSelect.value || "en" : "en";
 if (languageSelect) {
     languageSelect.addEventListener("change", () => {
-        currentLanguage = languageSelect.value;
+        currentLanguage = languageSelect.value || "en";
         // Update the lang attribute on the root HTML element to help browsers and assistive
         // technologies handle the selected language correctly. This does not affect
         // styling but improves accessibility and ensures hyphenation and font fallback.
