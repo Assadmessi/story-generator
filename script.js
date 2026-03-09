@@ -45,6 +45,154 @@ const THEME_KEY = "story-generator-theme";
 const API_ENDPOINT = "/.netlify/functions/generate-story";
 const TYPING_SPEED = 16;
 
+const SPEECH_LANGUAGE_MAP = {
+    en: ["en-US", "en-GB", "en"],
+    mm: ["my-MM", "my", "mym-MM", "mym"]
+};
+
+function getSpeechLang() {
+    const candidates = SPEECH_LANGUAGE_MAP[currentLanguage] || [currentLanguage || "en-US", "en"];
+    return candidates[0];
+}
+
+function getVoices() {
+    if (!("speechSynthesis" in window)) {
+        return [];
+    }
+    return window.speechSynthesis.getVoices() || [];
+}
+
+function waitForVoices(timeout = 1200) {
+    return new Promise((resolve) => {
+        const existing = getVoices();
+        if (existing.length) {
+            resolve(existing);
+            return;
+        }
+
+        let settled = false;
+        const finish = () => {
+            if (settled) {
+                return;
+            }
+            settled = true;
+            window.speechSynthesis.removeEventListener("voiceschanged", handleVoicesChanged);
+            clearTimeout(timer);
+            resolve(getVoices());
+        };
+
+        const handleVoicesChanged = () => finish();
+        const timer = setTimeout(finish, timeout);
+        window.speechSynthesis.addEventListener("voiceschanged", handleVoicesChanged);
+    });
+}
+
+function pickBestVoice(voices = []) {
+    if (!voices.length) {
+        return null;
+    }
+
+    const preferredLangs = SPEECH_LANGUAGE_MAP[currentLanguage] || [currentLanguage || "en-US"];
+    const normalizedPreferredLangs = preferredLangs.map((lang) => String(lang).toLowerCase());
+
+    const exactMatch = voices.find((voice) => normalizedPreferredLangs.includes(String(voice.lang || "").toLowerCase()));
+    if (exactMatch) {
+        return exactMatch;
+    }
+
+    if (currentLanguage === "mm") {
+        const myanmarVoice = voices.find((voice) => {
+            const name = String(voice.name || "").toLowerCase();
+            const lang = String(voice.lang || "").toLowerCase();
+            return lang.startsWith("my") || lang.startsWith("mym") || /myanmar|burmese/.test(name);
+        });
+
+        if (myanmarVoice) {
+            return myanmarVoice;
+        }
+    }
+
+    const startsWithMatch = voices.find((voice) => {
+        const lang = String(voice.lang || "").toLowerCase();
+        return normalizedPreferredLangs.some((preferred) => lang.startsWith(preferred.split("-")[0]));
+    });
+
+    return startsWithMatch || voices.find((voice) => voice.default) || voices[0] || null;
+}
+
+function splitStoryForSpeech(text = "") {
+    const normalized = String(text || "").replace(/\s+/g, " ").trim();
+    if (!normalized) {
+        return [];
+    }
+
+    const sentences = normalized.match(/[^.!?။]+[.!?။]?/g) || [normalized];
+    const chunks = [];
+    let buffer = "";
+
+    sentences.forEach((sentence) => {
+        const part = sentence.trim();
+        if (!part) {
+            return;
+        }
+
+        if (!buffer) {
+            buffer = part;
+            return;
+        }
+
+        if ((buffer + " " + part).length <= 220) {
+            buffer += " " + part;
+            return;
+        }
+
+        chunks.push(buffer);
+        buffer = part;
+    });
+
+    if (buffer) {
+        chunks.push(buffer);
+    }
+
+    return chunks;
+}
+
+function speakChunks(chunks, voice) {
+    return new Promise((resolve, reject) => {
+        if (!chunks.length) {
+            resolve();
+            return;
+        }
+
+        let index = 0;
+
+        const speakNext = () => {
+            if (index >= chunks.length) {
+                resolve();
+                return;
+            }
+
+            const utterance = new SpeechSynthesisUtterance(chunks[index]);
+            utterance.lang = getSpeechLang();
+            if (voice) {
+                utterance.voice = voice;
+                utterance.lang = voice.lang || utterance.lang;
+            }
+            utterance.rate = 0.96;
+            utterance.pitch = 1;
+            utterance.volume = 1;
+            utterance.onend = () => {
+                index += 1;
+                speakNext();
+            };
+            utterance.onerror = (event) => reject(event.error || new Error("Speech failed."));
+            window.speechSynthesis.speak(utterance);
+        };
+
+        speakNext();
+    });
+}
+
 function showStatus(message, isError = false) {
     statusMessage.textContent = message;
     statusMessage.style.color = isError ? "#f87171" : "var(--success)";
@@ -293,7 +441,7 @@ async function requestStory({ random = false } = {}) {
     }
 }
 
-function speakStory() {
+async function speakStory() {
     const storyText = (output.dataset.storyText || output.textContent || "").trim();
 
     if (!storyText || storyText === DEFAULT_OUTPUT) {
@@ -306,26 +454,22 @@ function speakStory() {
         return;
     }
 
-    window.speechSynthesis.cancel();
-    const speech = new SpeechSynthesisUtterance(storyText);
-    // Set language for speech synthesis based on the current language selection. The
-    // default behaviour of the SpeechSynthesis API is to guess English which
-    // causes Burmese text to be misread. When the user selects the Myanmar
-    // language, explicitly set the language code to `my` (ISO 639‑1 code for
-    // Burmese); otherwise fall back to the selected language if available.
-    // See https://developer.mozilla.org/en-US/docs/Web/API/SpeechSynthesisUtterance/lang
-    if (typeof currentLanguage === "string" && currentLanguage) {
-        if (currentLanguage === "mm") {
-            speech.lang = "my";
-        } else {
-            speech.lang = currentLanguage;
+    try {
+        window.speechSynthesis.cancel();
+        const voices = await waitForVoices();
+        const selectedVoice = pickBestVoice(voices);
+
+        if (currentLanguage === "mm" && !selectedVoice) {
+            showStatus("Myanmar voice is not available in this browser right now.", true);
+            return;
         }
+
+        const chunks = splitStoryForSpeech(storyText);
+        await speakChunks(chunks, selectedVoice);
+        showStatus(currentLanguage === "mm" ? "Reading your Myanmar story out loud." : "Reading your story out loud.");
+    } catch {
+        showStatus(currentLanguage === "mm" ? "Could not read the Myanmar story in this browser." : "Could not read the story in this browser.", true);
     }
-    speech.rate = 0.96;
-    speech.pitch = 1;
-    speech.volume = 1;
-    window.speechSynthesis.speak(speech);
-    showStatus("Reading your story out loud.");
 }
 
 async function copyStory(text = (output.dataset.storyText || output.textContent || "").trim()) {
