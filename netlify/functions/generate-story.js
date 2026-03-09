@@ -1,11 +1,20 @@
 const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent";
 
 const randomWords = {
-  adjectives: ["tiny", "brave", "sparkly", "mysterious", "gentle", "fearless", "golden", "curious", "glowing", "playful"],
-  nouns: ["dragon", "fox", "robot", "pirate", "wizard", "astronaut", "panda", "traveler", "lion", "inventor"],
-  verbs: ["dancing", "running", "singing", "exploring", "gliding", "laughing", "searching", "building", "flying", "wandering"],
-  places: ["enchanted forest", "moon base", "desert village", "hidden castle", "ocean cave", "sky city", "secret library", "snowy mountain", "golden harbor", "quiet island"],
-  extra: ["lantern", "map", "cupcake", "compass", "treasure", "book", "crystal", "donut", "key", "star"],
+  en: {
+    adjectives: ["tiny", "brave", "sparkly", "mysterious", "gentle", "fearless", "golden", "curious", "glowing", "playful"],
+    nouns: ["dragon", "fox", "robot", "pirate", "wizard", "astronaut", "panda", "traveler", "lion", "inventor"],
+    verbs: ["dancing", "running", "singing", "exploring", "gliding", "laughing", "searching", "building", "flying", "wandering"],
+    places: ["enchanted forest", "moon base", "desert village", "hidden castle", "ocean cave", "sky city", "secret library", "snowy mountain", "golden harbor", "quiet island"],
+    extra: ["lantern", "map", "cupcake", "compass", "treasure", "book", "crystal", "donut", "key", "star"]
+  },
+  mm: {
+    adjectives: ["သေးငယ်တဲ့", "ရဲရင့်တဲ့", "တောက်ပတဲ့", "လျှို့ဝှက်ဆန်တဲ့", "နူးညံ့တဲ့", "ကြောက်မဲ့တဲ့", "ရွှေရောင်", "စူးစမ်းချင်တဲ့", "အလင်းရောင်ပြည့်တဲ့", "ပျော်ရွှင်တဲ့"],
+    nouns: ["နဂါး", "မြေခွေး", "စက်ရုပ်", "ပင်လယ်ဓားပြ", "မှော်ဆရာ", "အာကာသခရီးသွား", "ပန်ဒါ", "ခရီးသွား", "ခြင်္သေ့", "တီထွင်သူ"],
+    verbs: ["ကခုန်", "ပြေးလွှား", "သီချင်းဆို", "စူးစမ်း", "လေထဲလျှော", "ရယ်မော", "ရှာဖွေ", "တည်ဆောက်", "ပျံသန်း", "လှည့်လည်"],
+    places: ["မှော်တောအုပ်", "လကမ္ဘာစခန်း", "သဲကန္တာရရွာ", "လျှို့ဝှက်ရဲတိုက်", "သမုဒ္ဒရာဂူ", "ကောင်းကင်မြို့", "လျှို့ဝှက်စာကြည့်တိုက်", "နှင်းဖုံးတောင်", "ရွှေဆိပ်ကမ်း", "တိတ်ဆိတ်ကျွန်း"],
+    extra: ["မီးအိမ်", "မြေပုံ", "မုန့်", "ကွန်ပါစ်", "ရတနာ", "စာအုပ်", "ကျောက်တုံးတောက်ပ", "ဒိုးနတ်", "သော့", "ကြယ်"]
+  }
 };
 
 const CORS_HEADERS = {
@@ -28,6 +37,32 @@ const LANGUAGE_NAMES = {
   mm: "Burmese (the Myanmar language)",
 };
 
+function getRandomWordSet(language = "en") {
+  return randomWords[String(language || "en").toLowerCase()] || randomWords.en;
+}
+
+function getDefaultInputs(language = "en") {
+  if (String(language || "en").toLowerCase() === "mm") {
+    return {
+      adjective: "စူးစမ်းချင်တဲ့",
+      noun: "ခရီးသွား",
+      verb: "စူးစမ်း",
+      place: "လျှို့ဝှက်ချိုင့်ဝှမ်း",
+      adjective2: "တောက်ပတဲ့",
+      noun2: "မီးအိမ်"
+    };
+  }
+
+  return {
+    adjective: "curious",
+    noun: "traveler",
+    verb: "exploring",
+    place: "hidden valley",
+    adjective2: "glowing",
+    noun2: "lantern"
+  };
+}
+
 function pickRandom(list) {
   return list[Math.floor(Math.random() * list.length)];
 }
@@ -41,25 +76,28 @@ function cleanValue(value, fallback) {
   return normalized || fallback;
 }
 
-function buildInputs(rawInputs = {}, random = false) {
+function buildInputs(rawInputs = {}, random = false, language = "en") {
+  const wordSet = getRandomWordSet(language);
+  const defaults = getDefaultInputs(language);
+
   const seeded = random
     ? {
-        adjective: pickRandom(randomWords.adjectives),
-        noun: pickRandom(randomWords.nouns),
-        verb: pickRandom(randomWords.verbs),
-        place: pickRandom(randomWords.places),
-        adjective2: pickRandom(randomWords.adjectives),
-        noun2: pickRandom(randomWords.extra),
+        adjective: pickRandom(wordSet.adjectives),
+        noun: pickRandom(wordSet.nouns),
+        verb: pickRandom(wordSet.verbs),
+        place: pickRandom(wordSet.places),
+        adjective2: pickRandom(wordSet.adjectives),
+        noun2: pickRandom(wordSet.extra),
       }
     : rawInputs;
 
   return {
-    adjective: cleanValue(seeded.adjective, "curious"),
-    noun: cleanValue(seeded.noun, "traveler"),
-    verb: cleanValue(seeded.verb, "exploring"),
-    place: cleanValue(seeded.place, "hidden valley"),
-    adjective2: cleanValue(seeded.adjective2, "glowing"),
-    noun2: cleanValue(seeded.noun2, "lantern"),
+    adjective: cleanValue(seeded.adjective, defaults.adjective),
+    noun: cleanValue(seeded.noun, defaults.noun),
+    verb: cleanValue(seeded.verb, defaults.verb),
+    place: cleanValue(seeded.place, defaults.place),
+    adjective2: cleanValue(seeded.adjective2, defaults.adjective2),
+    noun2: cleanValue(seeded.noun2, defaults.noun2),
   };
 }
 
@@ -207,7 +245,7 @@ exports.handler = async (event) => {
     }
 
     const { inputs: rawInputs = {}, random = false, language = "en" } = JSON.parse(event.body || "{}");
-    const inputs = buildInputs(rawInputs, Boolean(random));
+    const inputs = buildInputs(rawInputs, Boolean(random), language);
     // Build a prompt that respects the requested language. If the language field
     // is missing or unsupported it falls back to English.
     const prompt = buildPrompt(inputs, Boolean(random), language);
@@ -220,7 +258,7 @@ exports.handler = async (event) => {
       const text = extractText(data);
       const parsed = safeJsonParse(text);
       story = String(parsed?.story || "").trim();
-      normalizedInputs = buildInputs(parsed?.normalizedInputs || inputs, false);
+      normalizedInputs = buildInputs(parsed?.normalizedInputs || inputs, false, language);
 
       if (isMyanmarLanguage(language) && !looksLikeMyanmarText(story)) {
         throw new Error("Myanmar story was not returned in Myanmar text.");

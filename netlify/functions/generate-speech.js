@@ -13,21 +13,21 @@ const CORS_HEADERS = {
 const LANGUAGE_CONFIG = {
   en: {
     locale: "en",
-    voices: ["Gacrux", "Sulafat", "Achird"],
+    voices: ["Sulafat", "Gacrux", "Achird"],
     stylePrompt:
-      "Read this story out loud in expressive, cinematic English with a warm storyteller tone. Keep it smooth, natural, immersive, and slightly dramatic without becoming exaggerated. Speak only the story text."
+      "You are a warm, mature storyteller. Read only the transcript in expressive, cinematic English with smooth pacing, clean pronunciation, and an immersive storybook feel. No extra introductions. No labels. No commentary."
   },
   mm: {
     locale: "my",
-    voices: ["Gacrux", "Sulafat", "Achird"],
+    voices: ["Sulafat", "Gacrux", "Achird"],
     stylePrompt:
-      "Read this story out loud in natural Burmese with a warm storyteller tone. Keep it smooth, expressive, clear, and immersive. Speak only the story text with no extra introduction or commentary."
+      "သင်က ပုံပြင်ပြောသံ နွေးထွေးပြီး တည်ငြိမ်တဲ့ ဇာတ်ကြောင်းပြောသူတစ်ယောက်ပါ။ အောက်က စာသားကိုသာ သဘာဝကျတဲ့ မြန်မာအသံနဲ့ ပုံပြင်ဆန်ဆန် ဖတ်ပေးပါ။ အစကားမထည့်ပါနဲ့။ မှတ်ချက်မထည့်ပါနဲ့။ အညွှန်းစာမဖတ်ပါနဲ့။"
   }
 };
 
 const CHUNK_LIMITS = {
   en: 260,
-  mm: 170
+  mm: 120
 };
 
 function getLanguageConfig(language = "en") {
