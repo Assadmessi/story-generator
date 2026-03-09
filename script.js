@@ -45,6 +45,7 @@ const THEME_KEY = "story-generator-theme";
 const API_ENDPOINT = "/.netlify/functions/generate-story";
 const SPEECH_API_ENDPOINT = "/.netlify/functions/generate-speech";
 const TYPING_SPEED = 16;
+const VOICE_VARIANT_KEY = "story-generator-voice-variant-v1";
 
 let currentAudio = null;
 let isAiSpeaking = false;
@@ -53,6 +54,35 @@ const SPEECH_LANGUAGE_MAP = {
     en: ["en-US", "en-GB", "en"],
     mm: ["my-MM", "my", "mym-MM", "mym"]
 };
+
+function getStoredVoiceVariant() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(VOICE_VARIANT_KEY) || "{}");
+        const value = saved?.[currentLanguage];
+        return Number.isInteger(value) ? value : 0;
+    } catch {
+        return 0;
+    }
+}
+
+function advanceVoiceVariant() {
+    const currentVariant = getStoredVoiceVariant();
+    const nextVariant = (currentVariant + 1) % 3;
+
+    try {
+        const saved = JSON.parse(localStorage.getItem(VOICE_VARIANT_KEY) || "{}");
+        saved[currentLanguage] = nextVariant;
+        localStorage.setItem(VOICE_VARIANT_KEY, JSON.stringify(saved));
+    } catch {
+        localStorage.setItem(VOICE_VARIANT_KEY, JSON.stringify({ [currentLanguage]: nextVariant }));
+    }
+
+    return currentVariant;
+}
+
+function getVoiceDisplayName(voiceData = {}) {
+    return voiceData.voiceLabel || voiceData.voiceName || "Storyteller";
+}
 
 function getSpeechLang() {
     const candidates = SPEECH_LANGUAGE_MAP[currentLanguage] || [currentLanguage || "en-US", "en"];
@@ -473,7 +503,8 @@ async function requestAiSpeech(text) {
         },
         body: JSON.stringify({
             text,
-            language: currentLanguage
+            language: currentLanguage,
+            voiceVariant: advanceVoiceVariant()
         })
     });
 
@@ -496,11 +527,12 @@ async function playAiSpeech(text) {
 
         stopCurrentAudio();
         currentAudio = new Audio(audioSrc);
+        const voiceDisplayName = getVoiceDisplayName(data);
         currentAudio.preload = "auto";
         currentAudio.onended = () => {
             isAiSpeaking = false;
             setSpeakButtonState(false);
-            showStatus(currentLanguage === "mm" ? "Myanmar AI voice finished playing." : "AI voice finished playing.");
+            showStatus(currentLanguage === "mm" ? `${voiceDisplayName} finished playing your Myanmar story.` : `${voiceDisplayName} finished playing your story.`);
         };
         currentAudio.onerror = () => {
             isAiSpeaking = false;
@@ -511,7 +543,7 @@ async function playAiSpeech(text) {
         await currentAudio.play();
         isAiSpeaking = true;
         setSpeakButtonState(false);
-        showStatus(currentLanguage === "mm" ? "Playing Myanmar AI voice." : "Playing AI voice.");
+        showStatus(currentLanguage === "mm" ? `Playing ${voiceDisplayName} for your Myanmar story.` : `Playing ${voiceDisplayName} for your story.`);
         return true;
     } catch (error) {
         setSpeakButtonState(false);
