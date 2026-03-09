@@ -24,7 +24,6 @@ const shareBackdrop = document.getElementById("shareBackdrop");
 const closeShareMenuBtn = document.getElementById("closeShareMenu");
 const shareFacebookBtn = document.getElementById("shareFacebook");
 const shareWhatsAppBtn = document.getElementById("shareWhatsApp");
-const shareInstagramBtn = document.getElementById("shareInstagram");
 const shareViberBtn = document.getElementById("shareViber");
 
 const DEFAULT_OUTPUT = "Your AI story will appear here...";
@@ -358,8 +357,8 @@ async function shareToPlatform(platform) {
 
     if (platform === "facebook") {
         await copyStory(payload.text);
-        openShareWindow(`https://www.facebook.com/dialog/share?app_id=966242223397117&display=popup&href=${payload.encodedUrl}&quote=${payload.encodedText}`);
-        showStatus("Facebook share opened. Your story text was copied too.");
+        openShareWindow(`https://www.facebook.com/dialog/share?app_id=966242223397117&display=popup&href=${payload.encodedUrl}`);
+        showStatus("Facebook share opened. Your story was copied, so you can paste it into your post.");
         closeShareMenu();
         return;
     }
@@ -378,18 +377,10 @@ async function shareToPlatform(platform) {
         return;
     }
 
-    if (platform === "instagram") {
-        await copyStory(payload.text);
-        const opened = window.open("instagram://app", "_blank");
-
-        if (!opened) {
-            openShareWindow("https://www.instagram.com/");
-        }
-
         showStatus("Instagram does not support direct text share from normal web pages, so your story was copied and Instagram was opened.", true);
         closeShareMenu();
     }
-}
+
 
 async function shareStory() {
     const text = (output.dataset.storyText || output.textContent || "").trim();
@@ -508,7 +499,6 @@ shareBackdrop.addEventListener("click", closeShareMenu);
 closeShareMenuBtn.addEventListener("click", closeShareMenu);
 shareFacebookBtn.addEventListener("click", () => shareToPlatform("facebook"));
 shareWhatsAppBtn.addEventListener("click", () => shareToPlatform("whatsapp"));
-shareInstagramBtn.addEventListener("click", () => shareToPlatform("instagram"));
 shareViberBtn.addEventListener("click", () => shareToPlatform("viber"));
 
 document.addEventListener("keydown", (event) => {

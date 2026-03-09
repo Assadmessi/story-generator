@@ -620,9 +620,6 @@ body.light .skeleton-line {
     background: linear-gradient(135deg, rgba(22, 163, 74, 0.22), rgba(74, 222, 128, 0.12));
 }
 
-.share-option.instagram {
-    background: linear-gradient(135deg, rgba(219, 39, 119, 0.22), rgba(249, 115, 22, 0.12));
-}
 
 .share-option.viber {
     background: linear-gradient(135deg, rgba(124, 58, 237, 0.22), rgba(167, 139, 250, 0.12));
