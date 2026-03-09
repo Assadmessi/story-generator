@@ -1,16 +1,3 @@
-# Story Generator Studio
-
-This version removes the old template-based story builder and uses a secure Netlify Function as the backend for real AI story generation.
-
-## What changed
-
-- removed template story generation from the frontend
-- added real AI story generation through `/.netlify/functions/generate-story`
-- keeps the API key in the backend only
-- supports messy user input and smooths it into natural story writing
-- highlights the important prompt words inside the generated story
-- supports random AI story generation
-- keeps your original styling, layout feel, animations, history, voice, copy, and share actions
 
 ## Free setup for Netlify
 
