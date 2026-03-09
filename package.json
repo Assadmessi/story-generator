@@ -1,0 +1,12 @@
+{
+  "name": "story-generator-studio",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "netlify dev",
+    "start": "netlify dev"
+  },
+  "devDependencies": {
+    "netlify-cli": "^23.2.0"
+  }
+}

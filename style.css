@@ -220,6 +220,30 @@ button:hover {
     min-width: 180px;
 }
 
+
+.ai-chip-wrap {
+    display: flex;
+    align-items: center;
+}
+
+.ai-pill {
+    white-space: nowrap;
+}
+
+.story-highlight {
+    background: rgba(34, 211, 238, 0.22);
+    color: inherit;
+    padding: 0.08em 0.35em;
+    border-radius: 0.5em;
+    border: 1px solid rgba(34, 211, 238, 0.22);
+    box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.08) inset;
+}
+
+body.light .story-highlight {
+    background: rgba(124, 58, 237, 0.12);
+    border-color: rgba(124, 58, 237, 0.18);
+}
+
 .template-wrap label,
 .field label {
     display: block;

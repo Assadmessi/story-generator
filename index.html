@@ -15,9 +15,9 @@
     <main class="app">
         <section class="hero reveal">
             <div>
-                <span class="badge">JavaScript Project</span>
+                <span class="badge">AI Storytelling Project</span>
                 <h1>Story Generator Studio</h1>
-                <p class="subtitle">An interactive storytelling app with animated UI, dark and light themes, random prompts, voice narration, share actions, and persistent story history.</p>
+                <p class="subtitle">A real AI storytelling app with a secure backend, highlighted prompt words, random story generation, animated UI, voice narration, share actions, and saved story history.</p>
             </div>
 
             <div class="hero-actions">
@@ -33,16 +33,10 @@
                 <div class="panel-header">
                     <div>
                         <p class="eyebrow">Create</p>
-                        <h2>Build your story</h2>
+                        <h2>Tell the AI what you want</h2>
                     </div>
-                    <div class="template-wrap">
-                        <label for="templateSelect">Template</label>
-                        <select id="templateSelect">
-                            <option value="fantasy">Fantasy</option>
-                            <option value="adventure">Adventure</option>
-                            <option value="sci-fi">Sci‑Fi</option>
-                            <option value="funny">Funny</option>
-                        </select>
+                    <div class="template-wrap ai-chip-wrap">
+                        <span class="template-pill ai-pill">AI Powered Story</span>
                     </div>
                 </div>
 
@@ -56,7 +50,7 @@
                         <input id="noun" placeholder="dragon">
                     </div>
                     <div class="field">
-                        <label for="verb">Verb</label>
+                        <label for="verb">Verb or action</label>
                         <input id="verb" placeholder="dancing">
                     </div>
                     <div class="field">
@@ -64,18 +58,18 @@
                         <input id="place" placeholder="enchanted forest">
                     </div>
                     <div class="field">
-                        <label for="adjective2">Another adjective</label>
+                        <label for="adjective2">Another detail</label>
                         <input id="adjective2" placeholder="sparkly">
                     </div>
                     <div class="field">
-                        <label for="noun2">Another noun</label>
+                        <label for="noun2">Extra object or character</label>
                         <input id="noun2" placeholder="cupcake">
                     </div>
                 </div>
 
                 <div class="actions">
                     <button class="primary" id="generateBtn" type="button">Generate Story</button>
-                    <button class="secondary" id="randomBtn" type="button">🎲 Random</button>
+                    <button class="secondary" id="randomBtn" type="button">🎲 Random Story</button>
                     <button class="secondary" id="speakBtn" type="button">🔊 Speak</button>
                     <button class="secondary" id="copyBtn" type="button">📋 Copy</button>
                     <button class="secondary" id="shareBtn" type="button">📤 Share</button>
@@ -91,11 +85,11 @@
                         <p class="eyebrow">Preview</p>
                         <h2>Your story</h2>
                     </div>
-                    <span class="template-pill" id="activeTemplateLabel">Fantasy Template</span>
+                    <span class="template-pill" id="activeTemplateLabel">AI Story Mode</span>
                 </div>
 
                 <article class="story-box" id="storyBox">
-                    <p id="output">Your magical story will appear here...</p>
+                    <p id="output">Your AI story will appear here...</p>
                 </article>
             </section>
         </section>

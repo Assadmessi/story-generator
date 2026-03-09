@@ -13,7 +13,6 @@ const copyBtn = document.getElementById("copyBtn");
 const shareBtn = document.getElementById("shareBtn");
 const clearBtn = document.getElementById("clearBtn");
 const clearHistoryBtn = document.getElementById("clearHistoryBtn");
-const templateSelect = document.getElementById("templateSelect");
 const activeTemplateLabel = document.getElementById("activeTemplateLabel");
 const historyList = document.getElementById("historyList");
 const themeToggle = document.getElementById("themeToggle");
@@ -21,28 +20,10 @@ const themeIcon = document.getElementById("themeIcon");
 const themeText = document.getElementById("themeText");
 const statusMessage = document.getElementById("statusMessage");
 
-const DEFAULT_OUTPUT = "Your magical story will appear here...";
-const HISTORY_KEY = "story-generator-history-v2";
+const DEFAULT_OUTPUT = "Your AI story will appear here...";
+const HISTORY_KEY = "story-generator-history-v3";
 const THEME_KEY = "story-generator-theme";
-
-const randomWords = {
-    adjectives: ["tiny", "brave", "sparkly", "mysterious", "funny", "sleepy", "wild", "gentle", "glowing", "fearless"],
-    nouns: ["dragon", "lion", "robot", "pirate", "wizard", "dog", "cat", "fox", "astronaut", "panda"],
-    verbs: ["dancing", "running", "singing", "jumping", "roaring", "spinning", "glowing", "flying", "exploring", "laughing"],
-    places: ["park", "forest", "castle", "moon base", "village", "playground", "desert", "mountain", "secret lab", "ocean cave"],
-    nouns2: ["cupcake", "rabbit", "sandwich", "donut", "apple", "taco", "marshmallow", "pizza", "meteor", "treasure map"]
-};
-
-const templateNames = {
-    fantasy: "Fantasy Template",
-    adventure: "Adventure Template",
-    "sci-fi": "Sci‑Fi Template",
-    funny: "Funny Template"
-};
-
-function pickRandom(list) {
-    return list[Math.floor(Math.random() * list.length)];
-}
+const API_ENDPOINT = "/.netlify/functions/generate-story";
 
 function showStatus(message, isError = false) {
     statusMessage.textContent = message;
@@ -52,41 +33,28 @@ function showStatus(message, isError = false) {
         clearTimeout(showStatus.timer);
         showStatus.timer = setTimeout(() => {
             statusMessage.textContent = "";
-        }, 2400);
+        }, 3200);
     }
 }
 
 function getFormValues() {
     return {
-        adjective: adjectiveInput.value.trim() || "tiny",
-        noun: nounInput.value.trim() || "dog",
-        verb: verbInput.value.trim() || "running",
-        place: placeInput.value.trim() || "park",
-        adjective2: adjective2Input.value.trim() || "fast",
-        noun2: noun2Input.value.trim() || "rabbit"
+        adjective: adjectiveInput.value.trim(),
+        noun: nounInput.value.trim(),
+        verb: verbInput.value.trim(),
+        place: placeInput.value.trim(),
+        adjective2: adjective2Input.value.trim(),
+        noun2: noun2Input.value.trim()
     };
 }
 
-function setFormValues(values) {
+function setFormValues(values = {}) {
     adjectiveInput.value = values.adjective || "";
     nounInput.value = values.noun || "";
     verbInput.value = values.verb || "";
     placeInput.value = values.place || "";
     adjective2Input.value = values.adjective2 || "";
     noun2Input.value = values.noun2 || "";
-}
-
-function buildStory(values, template) {
-    const { adjective, noun, verb, place, adjective2, noun2 } = values;
-
-    const templates = {
-        fantasy: `Once upon a time, a ${adjective} ${noun} lived in a ${place}. Every sunset, the ${noun} would start ${verb}, and its ${adjective2} energy lit up the sky like magic. One day it discovered a hidden ${noun2}, and from that moment the entire ${place} remembered the ${noun} as a legend.`,
-        adventure: `Deep in the ${place}, a ${adjective} ${noun} was getting ready for its biggest mission. With a ${adjective2} grin, it kept ${verb} past every obstacle until it found the missing ${noun2}. That brave journey turned the ${noun} into the hero everyone in the ${place} talked about.`,
-        "sci-fi": `On a distant station above the ${place}, a ${adjective} ${noun} activated its engines and began ${verb}. Its ${adjective2} sensors suddenly detected a mysterious ${noun2} drifting through space. After decoding the signal, the ${noun} changed the future of the ${place} forever.`,
-        funny: `In the middle of the ${place}, a ${adjective} ${noun} could not stop ${verb}. The strangest part was its ${adjective2} habit of carrying a ${noun2} everywhere it went. Nobody understood the chaos, but everyone laughed so much that the ${noun} became the funniest celebrity in the ${place}.`
-    };
-
-    return templates[template] || templates.fantasy;
 }
 
 function animateStoryBox() {
@@ -108,6 +76,49 @@ function saveHistory(history) {
     localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
 }
 
+function escapeHtml(text = "") {
+    return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
+
+function escapeRegExp(text = "") {
+    return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function buildHighlightMarkup(story, highlightTerms = []) {
+    const safeStory = escapeHtml(story || "");
+    const uniqueTerms = [...new Set(
+        (highlightTerms || [])
+            .map((term) => (term || "").trim())
+            .filter((term) => term.length > 1)
+    )].sort((a, b) => b.length - a.length);
+
+    if (!uniqueTerms.length) {
+        return safeStory;
+    }
+
+    const pattern = uniqueTerms
+        .map((term) => escapeRegExp(escapeHtml(term)))
+        .join("|");
+
+    if (!pattern) {
+        return safeStory;
+    }
+
+    const matcher = new RegExp(`(${pattern})`, "gi");
+    return safeStory.replace(matcher, '<mark class="story-highlight">$1</mark>');
+}
+
+function renderStory(story, highlightTerms = []) {
+    output.innerHTML = buildHighlightMarkup(story, highlightTerms);
+    output.dataset.storyText = story;
+    animateStoryBox();
+}
+
 function renderHistory() {
     const history = getHistory();
 
@@ -119,10 +130,10 @@ function renderHistory() {
     historyList.innerHTML = history.map((item) => `
         <article class="history-card">
             <div class="history-meta">
-                <strong>${item.title}</strong>
-                <span class="history-template">${item.templateLabel} • ${item.createdAt}</span>
+                <strong>${escapeHtml(item.title)}</strong>
+                <span class="history-template">${escapeHtml(item.modeLabel)} • ${escapeHtml(item.createdAt)}</span>
             </div>
-            <p>${item.story}</p>
+            <p>${escapeHtml(item.story)}</p>
             <div class="history-actions">
                 <button class="secondary" type="button" data-action="load" data-id="${item.id}">Load Story</button>
                 <button class="secondary" type="button" data-action="copy" data-id="${item.id}">Copy</button>
@@ -131,14 +142,32 @@ function renderHistory() {
     `).join("");
 }
 
-function addToHistory(story, values, template) {
+function createStoryTitle(values = {}) {
+    const words = [values.adjective, values.noun, values.place]
+        .filter(Boolean)
+        .slice(0, 3)
+        .join(" ")
+        .trim();
+
+    if (!words) {
+        return "AI Story";
+    }
+
+    return words
+        .split(" ")
+        .slice(0, 5)
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
+}
+
+function addToHistory(story, values, highlightTerms) {
     const history = getHistory();
     const newItem = {
         id: Date.now().toString(),
-        title: `${values.adjective.charAt(0).toUpperCase() + values.adjective.slice(1)} ${values.noun}`,
-        template,
-        templateLabel: templateNames[template],
+        title: createStoryTitle(values),
+        modeLabel: "AI Story Mode",
         values,
+        highlightTerms,
         story,
         createdAt: new Date().toLocaleString()
     };
@@ -148,42 +177,70 @@ function addToHistory(story, values, template) {
     renderHistory();
 }
 
-function generateStory(save = true) {
-    const values = getFormValues();
-    const template = templateSelect.value;
-    const story = buildStory(values, template);
+function setLoadingState(isLoading, mode = "generate") {
+    generateBtn.disabled = isLoading;
+    randomBtn.disabled = isLoading;
+    clearBtn.disabled = isLoading;
 
-    output.textContent = story;
-    activeTemplateLabel.textContent = templateNames[template];
-    animateStoryBox();
-
-    if (save) {
-        addToHistory(story, values, template);
-        showStatus("Story generated and saved to history.");
+    if (!isLoading) {
+        generateBtn.textContent = "Generate Story";
+        randomBtn.textContent = "🎲 Random Story";
+        return;
     }
 
-    return story;
+    if (mode === "random") {
+        randomBtn.textContent = "Generating...";
+    } else {
+        generateBtn.textContent = "Generating...";
+    }
 }
 
-function fillRandomWords() {
-    const values = {
-        adjective: pickRandom(randomWords.adjectives),
-        noun: pickRandom(randomWords.nouns),
-        verb: pickRandom(randomWords.verbs),
-        place: pickRandom(randomWords.places),
-        adjective2: pickRandom(randomWords.adjectives),
-        noun2: pickRandom(randomWords.nouns2)
-    };
+async function requestStory({ random = false } = {}) {
+    setLoadingState(true, random ? "random" : "generate");
+    showStatus(random ? "Creating a random AI story..." : "Creating your AI story...");
 
-    setFormValues(values);
-    generateStory();
+    try {
+        const response = await fetch(API_ENDPOINT, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                random,
+                inputs: getFormValues()
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data?.story) {
+            throw new Error(data?.error || "Could not generate story.");
+        }
+
+        const finalValues = data.normalizedInputs || getFormValues();
+        const highlightTerms = data.highlightTerms || Object.values(finalValues).filter(Boolean);
+
+        setFormValues(finalValues);
+        renderStory(data.story, highlightTerms);
+        activeTemplateLabel.textContent = data.modeLabel || "AI Story Mode";
+        addToHistory(data.story, finalValues, highlightTerms);
+        showStatus(random ? "Random AI story generated." : "AI story generated and saved.");
+        return data.story;
+    } catch (error) {
+        const fallbackMessage = error?.message || "Something went wrong while generating your story.";
+        showStatus(fallbackMessage, true);
+        throw error;
+    } finally {
+        setLoadingState(false);
+    }
 }
 
 function speakStory() {
-    const storyText = output.textContent.trim();
+    const storyText = (output.dataset.storyText || output.textContent || "").trim();
 
     if (!storyText || storyText === DEFAULT_OUTPUT) {
-        generateStory();
+        showStatus("Generate a story first.", true);
+        return;
     }
 
     if (!("speechSynthesis" in window)) {
@@ -192,7 +249,7 @@ function speakStory() {
     }
 
     window.speechSynthesis.cancel();
-    const speech = new SpeechSynthesisUtterance(output.textContent);
+    const speech = new SpeechSynthesisUtterance(storyText);
     speech.rate = 0.96;
     speech.pitch = 1;
     speech.volume = 1;
@@ -200,7 +257,7 @@ function speakStory() {
     showStatus("Reading your story out loud.");
 }
 
-async function copyStory(text = output.textContent.trim()) {
+async function copyStory(text = (output.dataset.storyText || output.textContent || "").trim()) {
     if (!text || text === DEFAULT_OUTPUT) {
         showStatus("Generate a story first.", true);
         return;
@@ -215,7 +272,7 @@ async function copyStory(text = output.textContent.trim()) {
 }
 
 async function shareStory() {
-    const text = output.textContent.trim();
+    const text = (output.dataset.storyText || output.textContent || "").trim();
 
     if (!text || text === DEFAULT_OUTPUT) {
         showStatus("Generate a story first.", true);
@@ -250,7 +307,8 @@ function clearAll() {
         noun2: ""
     });
     output.textContent = DEFAULT_OUTPUT;
-    activeTemplateLabel.textContent = templateNames[templateSelect.value];
+    output.dataset.storyText = DEFAULT_OUTPUT;
+    activeTemplateLabel.textContent = "AI Story Mode";
     if ("speechSynthesis" in window) {
         window.speechSynthesis.cancel();
     }
@@ -270,11 +328,9 @@ function loadHistoryItem(id) {
         return;
     }
 
-    templateSelect.value = item.template;
-    activeTemplateLabel.textContent = item.templateLabel;
     setFormValues(item.values);
-    output.textContent = item.story;
-    animateStoryBox();
+    renderStory(item.story, item.highlightTerms || Object.values(item.values || {}).filter(Boolean));
+    activeTemplateLabel.textContent = item.modeLabel || "AI Story Mode";
     showStatus("Story loaded from history.");
 }
 
@@ -295,19 +351,20 @@ function initializeTheme() {
     applyTheme(savedTheme);
 }
 
-function updateTemplateLabel() {
-    activeTemplateLabel.textContent = templateNames[templateSelect.value];
-}
+generateBtn.addEventListener("click", () => {
+    requestStory().catch(() => {});
+});
 
-generateBtn.addEventListener("click", () => generateStory());
-randomBtn.addEventListener("click", fillRandomWords);
+randomBtn.addEventListener("click", () => {
+    requestStory({ random: true }).catch(() => {});
+});
+
 speakBtn.addEventListener("click", speakStory);
 copyBtn.addEventListener("click", () => copyStory());
 shareBtn.addEventListener("click", shareStory);
 clearBtn.addEventListener("click", clearAll);
 clearHistoryBtn.addEventListener("click", clearHistory);
 themeToggle.addEventListener("click", toggleTheme);
-templateSelect.addEventListener("change", updateTemplateLabel);
 
 historyList.addEventListener("click", (event) => {
     const button = event.target.closest("button[data-action]");
@@ -328,5 +385,5 @@ historyList.addEventListener("click", (event) => {
 });
 
 initializeTheme();
-updateTemplateLabel();
 renderHistory();
+output.dataset.storyText = DEFAULT_OUTPUT;
