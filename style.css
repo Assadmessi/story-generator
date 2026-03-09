@@ -548,3 +548,104 @@ body.light .skeleton-line {
         font-size: 1rem;
     }
 }
+
+
+.share-menu[hidden] {
+    display: none;
+}
+
+.share-menu {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+}
+
+.share-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(2, 8, 23, 0.58);
+    backdrop-filter: blur(6px);
+    border: none;
+    padding: 0;
+    border-radius: 0;
+}
+
+.share-sheet {
+    position: absolute;
+    left: 50%;
+    bottom: 24px;
+    transform: translateX(-50%);
+    width: min(560px, calc(100% - 24px));
+    background: var(--surface-strong);
+    border: 1px solid var(--border);
+    border-radius: 26px;
+    box-shadow: var(--shadow);
+    padding: 22px;
+    animation: shareSheetIn 0.28s ease;
+}
+
+.share-sheet-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: flex-start;
+    margin-bottom: 18px;
+}
+
+.share-sheet h3 {
+    margin: 0;
+    font-size: 1.22rem;
+}
+
+.share-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.share-option {
+    min-height: 64px;
+    border-radius: 18px;
+    border: 1px solid var(--border);
+    background: var(--input-bg);
+    color: var(--text);
+    font-weight: 700;
+}
+
+.share-option.facebook {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.22), rgba(59, 130, 246, 0.12));
+}
+
+.share-option.whatsapp {
+    background: linear-gradient(135deg, rgba(22, 163, 74, 0.22), rgba(74, 222, 128, 0.12));
+}
+
+.share-option.instagram {
+    background: linear-gradient(135deg, rgba(219, 39, 119, 0.22), rgba(249, 115, 22, 0.12));
+}
+
+.share-option.viber {
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.22), rgba(167, 139, 250, 0.12));
+}
+
+.share-help {
+    margin: 14px 0 0;
+    color: var(--muted);
+    line-height: 1.6;
+    font-size: 0.94rem;
+}
+
+body.share-menu-open {
+    overflow: hidden;
+}
+
+@keyframes shareSheetIn {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(12px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0) scale(1);
+    }
+}

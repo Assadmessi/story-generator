@@ -19,6 +19,13 @@ const themeToggle = document.getElementById("themeToggle");
 const themeIcon = document.getElementById("themeIcon");
 const themeText = document.getElementById("themeText");
 const statusMessage = document.getElementById("statusMessage");
+const shareMenu = document.getElementById("shareMenu");
+const shareBackdrop = document.getElementById("shareBackdrop");
+const closeShareMenuBtn = document.getElementById("closeShareMenu");
+const shareFacebookBtn = document.getElementById("shareFacebook");
+const shareWhatsAppBtn = document.getElementById("shareWhatsApp");
+const shareInstagramBtn = document.getElementById("shareInstagram");
+const shareViberBtn = document.getElementById("shareViber");
 
 const DEFAULT_OUTPUT = "Your AI story will appear here...";
 const HISTORY_KEY = "story-generator-history-v3";
@@ -309,6 +316,81 @@ async function copyStory(text = (output.dataset.storyText || output.textContent 
     }
 }
 
+function getSharePayload() {
+    const text = (output.dataset.storyText || output.textContent || "").trim();
+    const pageUrl = window.location.href;
+    const combinedText = `${text}
+
+Made with Story Generator Studio
+${pageUrl}`.trim();
+
+    return {
+        text,
+        pageUrl,
+        combinedText,
+        encodedText: encodeURIComponent(text),
+        encodedCombinedText: encodeURIComponent(combinedText),
+        encodedUrl: encodeURIComponent(pageUrl)
+    };
+}
+
+function openShareMenu() {
+    shareMenu.hidden = false;
+    document.body.classList.add("share-menu-open");
+}
+
+function closeShareMenu() {
+    shareMenu.hidden = true;
+    document.body.classList.remove("share-menu-open");
+}
+
+function openShareWindow(url) {
+    window.open(url, "_blank", "noopener,noreferrer,width=720,height=720");
+}
+
+async function shareToPlatform(platform) {
+    const payload = getSharePayload();
+
+    if (!payload.text || payload.text === DEFAULT_OUTPUT) {
+        showStatus("Generate a story first.", true);
+        return;
+    }
+
+    if (platform === "facebook") {
+        await copyStory(payload.text);
+        openShareWindow(`https://www.facebook.com/dialog/share?app_id=966242223397117&display=popup&href=${payload.encodedUrl}&quote=${payload.encodedText}`);
+        showStatus("Facebook share opened. Your story text was copied too.");
+        closeShareMenu();
+        return;
+    }
+
+    if (platform === "whatsapp") {
+        openShareWindow(`https://wa.me/?text=${payload.encodedCombinedText}`);
+        showStatus("WhatsApp share opened.");
+        closeShareMenu();
+        return;
+    }
+
+    if (platform === "viber") {
+        openShareWindow(`viber://forward?text=${payload.encodedCombinedText}`);
+        showStatus("Viber share opened.");
+        closeShareMenu();
+        return;
+    }
+
+    if (platform === "instagram") {
+        await copyStory(payload.text);
+        const opened = window.open("instagram://app", "_blank");
+
+        if (!opened) {
+            openShareWindow("https://www.instagram.com/");
+        }
+
+        showStatus("Instagram does not support direct text share from normal web pages, so your story was copied and Instagram was opened.", true);
+        closeShareMenu();
+    }
+}
+
 async function shareStory() {
     const text = (output.dataset.storyText || output.textContent || "").trim();
 
@@ -317,22 +399,16 @@ async function shareStory() {
         return;
     }
 
+    await copyStory(text);
+
     if (navigator.share) {
-        try {
-            await navigator.share({
-                title: "Story Generator Studio",
-                text
-            });
-            showStatus("Story shared successfully.");
-            return;
-        } catch {
-            showStatus("Share canceled.", true);
-            return;
-        }
+        openShareMenu();
+        showStatus("Choose where you want to share your story.");
+        return;
     }
 
-    await copyStory(text);
-    showStatus("Share is not available here, so the story was copied instead.");
+    openShareMenu();
+    showStatus("Choose a sharing app.");
 }
 
 function clearAll() {
@@ -426,3 +502,17 @@ historyList.addEventListener("click", (event) => {
 initializeTheme();
 renderHistory();
 output.dataset.storyText = DEFAULT_OUTPUT;
+
+
+shareBackdrop.addEventListener("click", closeShareMenu);
+closeShareMenuBtn.addEventListener("click", closeShareMenu);
+shareFacebookBtn.addEventListener("click", () => shareToPlatform("facebook"));
+shareWhatsAppBtn.addEventListener("click", () => shareToPlatform("whatsapp"));
+shareInstagramBtn.addEventListener("click", () => shareToPlatform("instagram"));
+shareViberBtn.addEventListener("click", () => shareToPlatform("viber"));
+
+document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !shareMenu.hidden) {
+        closeShareMenu();
+    }
+});

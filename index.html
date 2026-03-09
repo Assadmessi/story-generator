@@ -77,6 +77,26 @@
                 </div>
 
                 <p id="statusMessage" class="status-message" aria-live="polite"></p>
+
+                <div class="share-menu" id="shareMenu" hidden>
+                    <button class="share-backdrop" id="shareBackdrop" type="button" aria-label="Close share menu"></button>
+                    <div class="share-sheet" role="dialog" aria-modal="true" aria-labelledby="shareTitle">
+                        <div class="share-sheet-header">
+                            <div>
+                                <p class="eyebrow">Share</p>
+                                <h3 id="shareTitle">Share your story</h3>
+                            </div>
+                            <button class="ghost small" id="closeShareMenu" type="button">Close</button>
+                        </div>
+                        <div class="share-grid">
+                            <button class="share-option facebook" id="shareFacebook" type="button">Facebook</button>
+                            <button class="share-option whatsapp" id="shareWhatsApp" type="button">WhatsApp</button>
+                            <button class="share-option instagram" id="shareInstagram" type="button">Instagram</button>
+                            <button class="share-option viber" id="shareViber" type="button">Viber</button>
+                        </div>
+                        <p class="share-help">Your story text stays ready to copy, and the selected app opens in a new tab or app when supported.</p>
+                    </div>
+                </div>
             </section>
 
             <section class="panel output-panel reveal delay-2">
