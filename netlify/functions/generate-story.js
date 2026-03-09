@@ -64,6 +64,9 @@ Hard requirements:
 - Keep the tone vivid, polished, and portfolio-worthy.
 - Do not mention prompts, inputs, lists, templates, or AI.
 - Avoid bullet points, labels, quotes around the input words, and meta commentary.
+- The main character identity must come from the noun input. Do not reuse default fantasy names like Elara, Luna, Aria, or similar unless the noun input itself is that name.
+- If the noun input is a role or creature, make that role or creature the protagonist, such as "the astronaut" or "the fox".
+- If the noun input looks like a personal name, use that exact name as the protagonist.
 - Naturally include these exact terms at least once when possible:
   adjective: ${inputs.adjective}
   noun: ${inputs.noun}
@@ -103,7 +106,8 @@ function safeJsonParse(text) {
 
 function buildFallbackStory(inputs) {
   const { adjective, noun, verb, place, adjective2, noun2 } = inputs;
-  return `In the heart of ${place}, a ${adjective} ${noun} became known for ${verb} whenever the evening sky changed color. Most people smiled at the sight, but no one expected that a ${adjective2} ${noun2} would arrive and quietly change everything. When a sudden problem threatened the peace of the place, the ${noun} followed the strange clue left behind by the ${noun2} and discovered that courage did not always look loud or dramatic. Sometimes it looked like staying calm, taking one more step, and helping others believe again. By dawn, the danger had passed, the streets were full of relieved laughter, and the once-overlooked ${noun} stood beneath the brightening sky with a new sense of purpose. From that day on, people remembered the story not only because it was magical, but because it felt true: even the smallest spark, carried with heart, can light an entire world.`;
+  const protagonist = noun && noun.trim() ? noun.trim() : "traveler";
+  return `In the heart of ${place}, ${/^[A-Z]/.test(protagonist) ? protagonist : `a ${adjective} ${protagonist}` } became known for ${verb} whenever the evening sky changed color. Most people smiled at the sight, but no one expected that a ${adjective2} ${noun2} would arrive and quietly change everything. When a sudden problem threatened the peace of the place, ${/^[A-Z]/.test(protagonist) ? protagonist : `the ${protagonist}` } followed the strange clue left behind by the ${noun2} and discovered that courage did not always look loud or dramatic. Sometimes it looked like staying calm, taking one more step, and helping others believe again. By dawn, the danger had passed, the streets were full of relieved laughter, and ${/^[A-Z]/.test(protagonist) ? protagonist : `the ${protagonist}` } stood beneath the brightening sky with a new sense of purpose. From that day on, people remembered the story not only because it was magical, but because it felt true: even the smallest spark, carried with heart, can light an entire world.`;
 }
 
 async function callGemini(apiKey, prompt) {

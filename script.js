@@ -24,6 +24,7 @@ const DEFAULT_OUTPUT = "Your AI story will appear here...";
 const HISTORY_KEY = "story-generator-history-v3";
 const THEME_KEY = "story-generator-theme";
 const API_ENDPOINT = "/.netlify/functions/generate-story";
+const TYPING_SPEED = 16;
 
 function showStatus(message, isError = false) {
     statusMessage.textContent = message;
@@ -116,7 +117,42 @@ function buildHighlightMarkup(story, highlightTerms = []) {
 function renderStory(story, highlightTerms = []) {
     output.innerHTML = buildHighlightMarkup(story, highlightTerms);
     output.dataset.storyText = story;
+    storyBox.classList.remove("is-loading");
     animateStoryBox();
+}
+
+function showLoadingSkeleton() {
+    storyBox.classList.add("is-loading");
+    output.dataset.storyText = "";
+    output.innerHTML = `
+        <div class="story-skeleton" aria-hidden="true">
+            <span class="skeleton-line long"></span>
+            <span class="skeleton-line medium"></span>
+            <span class="skeleton-line long"></span>
+            <span class="skeleton-line short"></span>
+            <span class="skeleton-line medium"></span>
+        </div>
+    `;
+}
+
+async function typeStory(story, highlightTerms = []) {
+    storyBox.classList.remove("is-loading");
+    output.innerHTML = "";
+    output.dataset.storyText = "";
+    const text = String(story || "");
+
+    if (!text) {
+        renderStory("", highlightTerms);
+        return;
+    }
+
+    for (let i = 0; i <= text.length; i += 1) {
+        output.textContent = text.slice(0, i);
+        output.dataset.storyText = text.slice(0, i);
+        await new Promise((resolve) => setTimeout(resolve, TYPING_SPEED));
+    }
+
+    renderStory(text, highlightTerms);
 }
 
 function renderHistory() {
@@ -188,6 +224,8 @@ function setLoadingState(isLoading, mode = "generate") {
         return;
     }
 
+    showLoadingSkeleton();
+
     if (mode === "random") {
         randomBtn.textContent = "Generating...";
     } else {
@@ -221,8 +259,8 @@ async function requestStory({ random = false } = {}) {
         const highlightTerms = data.highlightTerms || Object.values(finalValues).filter(Boolean);
 
         setFormValues(finalValues);
-        renderStory(data.story, highlightTerms);
         activeTemplateLabel.textContent = data.modeLabel || "AI Story Mode";
+        await typeStory(data.story, highlightTerms);
         addToHistory(data.story, finalValues, highlightTerms);
         showStatus(random ? "Random AI story generated." : "AI story generated and saved.");
         return data.story;
@@ -306,6 +344,7 @@ function clearAll() {
         adjective2: "",
         noun2: ""
     });
+    storyBox.classList.remove("is-loading");
     output.textContent = DEFAULT_OUTPUT;
     output.dataset.storyText = DEFAULT_OUTPUT;
     activeTemplateLabel.textContent = "AI Story Mode";
