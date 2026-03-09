@@ -27,7 +27,17 @@ const shareWhatsAppBtn = document.getElementById("shareWhatsApp");
 const shareViberBtn = document.getElementById("shareViber");
 const languageSelect = document.getElementById("languageSelect");
 let currentLanguage="en";
-if(languageSelect){languageSelect.addEventListener("change",()=>{currentLanguage=languageSelect.value;});}
+if (languageSelect) {
+    languageSelect.addEventListener("change", () => {
+        currentLanguage = languageSelect.value;
+        // Update the lang attribute on the root HTML element to help browsers and assistive
+        // technologies handle the selected language correctly. This does not affect
+        // styling but improves accessibility and ensures hyphenation and font fallback.
+        document.documentElement.setAttribute("lang", currentLanguage === "mm" ? "my" : currentLanguage);
+    });
+    // Set the initial lang attribute on page load.
+    document.documentElement.setAttribute("lang", currentLanguage === "mm" ? "my" : currentLanguage);
+}
 
 const DEFAULT_OUTPUT = "Your AI story will appear here...";
 const HISTORY_KEY = "story-generator-history-v3";
@@ -298,6 +308,19 @@ function speakStory() {
 
     window.speechSynthesis.cancel();
     const speech = new SpeechSynthesisUtterance(storyText);
+    // Set language for speech synthesis based on the current language selection. The
+    // default behaviour of the SpeechSynthesis API is to guess English which
+    // causes Burmese text to be misread. When the user selects the Myanmar
+    // language, explicitly set the language code to `my` (ISO 639‑1 code for
+    // Burmese); otherwise fall back to the selected language if available.
+    // See https://developer.mozilla.org/en-US/docs/Web/API/SpeechSynthesisUtterance/lang
+    if (typeof currentLanguage === "string" && currentLanguage) {
+        if (currentLanguage === "mm") {
+            speech.lang = "my";
+        } else {
+            speech.lang = currentLanguage;
+        }
+    }
     speech.rate = 0.96;
     speech.pitch = 1;
     speech.volume = 1;

@@ -17,6 +17,17 @@ const CORS_HEADERS = {
 
 const fieldOrder = ["adjective", "noun", "verb", "place", "adjective2", "noun2"];
 
+/**
+ * Map supported language codes to human-readable names. This allows the
+ * storytelling prompt to instruct Gemini to use the correct language. Only
+ * languages supported by the UI need to be mapped here; unrecognised codes
+ * will fall back to English.
+ */
+const LANGUAGE_NAMES = {
+  en: "English",
+  mm: "Burmese (the Myanmar language)",
+};
+
 function pickRandom(list) {
   return list[Math.floor(Math.random() * list.length)];
 }
@@ -52,9 +63,19 @@ function buildInputs(rawInputs = {}, random = false) {
   };
 }
 
-function buildPrompt(inputs, random) {
+function buildPrompt(inputs, random, language = "en") {
+  // Determine the requested language name; fall back to English for unknown codes.
+  const languageName = LANGUAGE_NAMES[String(language).toLowerCase()] || LANGUAGE_NAMES.en;
+  // Build a dynamic instruction telling Gemini which language to use. When the
+  // language is not English we explicitly mention the language name in the
+  // instruction to encourage the model to produce output in the target language.
+  const languageInstruction =
+    languageName === LANGUAGE_NAMES.en
+      ? "Write exactly one short story in clear, smooth, human-sounding English."
+      : `Write exactly one short story in clear, smooth, human-sounding ${languageName}.`;
+
   return `You are a warm, natural creative storyteller.
-Write exactly one short story in clear, smooth, human-sounding English.
+${languageInstruction}
 The story must feel natural and never awkward, robotic, childish, or template-based.
 If any of the user words are strange, misspelled, or grammatically messy, intelligently smooth them into the story without making the writing feel weird.
 
@@ -163,9 +184,11 @@ exports.handler = async (event) => {
       };
     }
 
-    const { inputs: rawInputs = {}, random = false } = JSON.parse(event.body || "{}");
+    const { inputs: rawInputs = {}, random = false, language = "en" } = JSON.parse(event.body || "{}");
     const inputs = buildInputs(rawInputs, Boolean(random));
-    const prompt = buildPrompt(inputs, Boolean(random));
+    // Build a prompt that respects the requested language. If the language field
+    // is missing or unsupported it falls back to English.
+    const prompt = buildPrompt(inputs, Boolean(random), language);
 
     let story = "";
     let normalizedInputs = { ...inputs };
